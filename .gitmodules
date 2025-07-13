@@ -1,3 +1,6 @@
 [submodule "tiliqua"]
 	path = tiliqua
 	url = https://github.com/apfaudio/tiliqua
+[submodule "coi-serviceworker"]
+	path = coi-serviceworker
+	url = https://github.com/gzuidhof/coi-serviceworker
