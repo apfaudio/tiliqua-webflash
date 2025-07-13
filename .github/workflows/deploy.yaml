@@ -6,14 +6,16 @@ permissions:
   contents: write
 
 jobs:
-  docs:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - run: git submodule update --init
       - run: |
           mkdir build
-          cp -L src/* build
+          cp src/index.html src/bg.jpg build
+          cp tiliqua/gateware/src/tiliqua/flash_core.py build
+          cp coi-serviceworker/coi-serviceworker.js build
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
