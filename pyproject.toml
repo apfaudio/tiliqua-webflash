@@ -1,0 +1,15 @@
+[project]
+name = "tiliqua-webflash"
+version = "0.1.0"
+description = "Simple webflasher utility for Tiliqua"
+authors = [
+    {name = "Sebastian Holzapfel", email = "me@sebholzapfel.com"},
+]
+dependencies = ["flask>=3.1.1"]
+requires-python = "==3.13.*"
+readme = "README.md"
+license = {text = "MIT"}
+
+
+[tool.pdm]
+distribution = false
