@@ -1006,14 +1006,21 @@ async function scanForTiliqua() {
         }
         
     } catch (error) {
-        const errorMsg = error.message || "Unknown error";
+        var errorMsg = error.message || "Unknown error";
+        let additionalInfo = "Check it is turned on, plugged in ('dbg' port), permissions correct, and RP2040 firmware is up to date.";
+        // Check for WebUSB support issues
+        if (error.message && error.message.includes("navigator.usb is undefined")) {
+            errorMsg = "WebUSB is not supported in this browser";
+            additionalInfo = "Please use Chrome, Edge, or another Chromium-based browser. Firefox does not support WebUSB.";
+        } else if (!navigator.usb) {
+            errorMsg = "WebUSB is not supported in this browser";
+            additionalInfo = "Please use Chrome, Edge, or another Chromium-based browser. WebUSB requires a Chromium-based browser.";
+        }
         showGlobalMessage(`Could not find Tiliqua debugger: ${errorMsg}`);
-        showGlobalMessage("Check it is turned on, plugged in ('dbg' port), permissions correct, and RP2040 firmware is up to date.");
-        
+        showGlobalMessage(additionalInfo);
         const deviceInfo = document.getElementById('device-info');
         deviceInfo.textContent = `Error: ${errorMsg}`;
         deviceInfo.className = 'device-info error';
-        
         return null;
     }
 }
