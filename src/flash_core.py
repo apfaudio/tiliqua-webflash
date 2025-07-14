@@ -1,1 +1,0 @@
-../../tiliqua/gateware/src/tiliqua/flash_core.py

@@ -13,3 +13,7 @@ license = {text = "MIT"}
 
 [tool.pdm]
 distribution = false
+
+[tool.pdm.scripts]
+build-site = "python scripts/server.py --build-only"
+serve = "python scripts/server.py"
