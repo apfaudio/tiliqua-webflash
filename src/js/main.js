@@ -28,6 +28,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     
+    // Enable all tabs for debugging
+    document.querySelectorAll('.tab-button').forEach(tab => tab.classList.add('enabled'));
+    
+    // Hide disconnected overlay for debugging
+    document.getElementById('disconnected-overlay').style.display = 'none';
+    
     // File input handlers
     document.querySelectorAll('input[type="file"]').forEach(input => {
         console.log('Setting up handler for input:', input.id);
