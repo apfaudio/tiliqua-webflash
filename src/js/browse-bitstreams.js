@@ -33,8 +33,10 @@ export async function openBrowseDialog(slotId) {
             const item = document.createElement('div');
             item.className = 'bitstream-item';
             item.dataset.filename = bitstream.filename;
+            const briefHtml = bitstream.brief ? `<div class="bitstream-brief">${bitstream.brief}</div>` : '';
             item.innerHTML = `
                 <div class="bitstream-name">${bitstream.name}</div>
+                ${briefHtml}
                 <div class="bitstream-size">${formatFileSize(bitstream.size)}</div>
             `;
             

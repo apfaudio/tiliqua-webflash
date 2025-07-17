@@ -216,7 +216,14 @@ body {
 
 .bitstream-name {
     font-weight: 600;
-    margin-bottom: 5px;
+    margin-bottom: 2px;
+}
+
+.bitstream-brief {
+    font-size: 13px;
+    color: #ccc;
+    margin-bottom: 3px;
+    line-height: 1.3;
 }
 
 .bitstream-size {

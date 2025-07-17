@@ -3,8 +3,27 @@ import argparse
 import shutil
 import os
 import json
+import gzip
+import tarfile
 from pathlib import Path
 
+
+def read_manifest_from_tarfile(file_path):
+    """Extract manifest.json from a .tar.gz file"""
+    try:
+        with tarfile.open(file_path, 'r:gz') as tar:
+            try:
+                manifest_member = tar.getmember('manifest.json')
+                manifest_file = tar.extractfile(manifest_member)
+                if manifest_file:
+                    manifest_data = json.loads(manifest_file.read().decode('utf-8'))
+                    return manifest_data
+            except KeyError:
+                # No manifest.json found
+                return None
+    except Exception as e:
+        print(f"Warning: Could not read manifest from {file_path}: {e}")
+        return None
 
 def generate_bitstreams_list(bitstreams_dir, build_dir):
     """Generate a JavaScript file containing the list of available bitstreams"""
@@ -14,9 +33,22 @@ def generate_bitstreams_list(bitstreams_dir, build_dir):
     for file_path in bitstreams_dir.glob("*.tar.gz"):
         if file_path.is_file():
             stat = file_path.stat()
+            
+            # Try to read manifest
+            manifest = read_manifest_from_tarfile(file_path)
+            
+            # Get name and brief from manifest, fallback to filename
+            display_name = file_path.stem.replace('.tar', '')  # Default fallback
+            brief = None
+            
+            if manifest:
+                display_name = manifest.get('name', display_name)
+                brief = manifest.get('brief', None)
+            
             bitstreams.append({
                 'filename': file_path.name,
-                'name': file_path.stem.replace('.tar', ''),  # Remove .tar.gz extension
+                'name': display_name,
+                'brief': brief,
                 'size': stat.st_size
             })
     
