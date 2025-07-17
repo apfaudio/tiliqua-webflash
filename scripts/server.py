@@ -40,15 +40,28 @@ def generate_bitstreams_list(bitstreams_dir, build_dir):
             # Get name and brief from manifest, fallback to filename
             display_name = file_path.stem.replace('.tar', '')  # Default fallback
             brief = None
+            tags = []
             
             if manifest:
                 display_name = manifest.get('name', display_name)
                 brief = manifest.get('brief', None)
+                
+                # Detect CPU tag - check if any region has 'firmware.bin'
+                regions = manifest.get('regions', [])
+                has_firmware = any(region.get('filename') == 'firmware.bin' for region in regions)
+                if has_firmware:
+                    tags.append('CPU')
+                
+                # Detect Video tag - check if video field is not '<none>'
+                video = manifest.get('video', '<none>')
+                if video != '<none>':
+                    tags.append('Video')
             
             bitstreams.append({
                 'filename': file_path.name,
                 'name': display_name,
                 'brief': brief,
+                'tags': tags,
                 'size': stat.st_size
             })
     

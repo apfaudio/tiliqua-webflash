@@ -203,6 +203,9 @@ body {
     cursor: pointer;
     transition: all 0.3s ease;
     border: 2px solid transparent;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
 }
 
 .bitstream-item:hover {
@@ -235,6 +238,81 @@ body {
     text-align: center;
     color: #999;
     padding: 40px;
+}
+
+/* Bitstream item layout */
+.bitstream-content {
+    flex: 1;
+}
+
+.bitstream-tags {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-left: 15px;
+}
+
+.bitstream-tag {
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.bitstream-tag.cpu {
+    background: #4f46e5;
+    color: white;
+}
+
+.bitstream-tag.video {
+    background: #059669;
+    color: white;
+}
+
+/* Filter buttons */
+.filter-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    justify-content: center;
+}
+
+.filter-button {
+    padding: 8px 16px;
+    border: 2px solid #444;
+    background: transparent;
+    color: #ccc;
+    border-radius: 20px;
+    cursor: pointer;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+}
+
+.filter-button:hover {
+    border-color: #667eea;
+    color: #fff;
+}
+
+.filter-button.active {
+    border-color: #667eea;
+    background: #667eea;
+    color: white;
+}
+
+.filter-button.cpu.active {
+    border-color: #4f46e5;
+    background: #4f46e5;
+}
+
+.filter-button.video.active {
+    border-color: #059669;
+    background: #059669;
 }
     transition: background 0.8s ease;
 }
