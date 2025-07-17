@@ -48,6 +48,187 @@ body {
     height: 100%;
     z-index: -1;
     background: rgba(10, 10, 10, 0.4);
+}
+
+/* Bitstream button layout */
+.bitstream-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.browse-button {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    font-size: 14px;
+}
+
+.browse-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.browse-button:disabled {
+    background: #333;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Dialog styles */
+.dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.dialog {
+    background: #1a1a1a;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #333;
+}
+
+.dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #333;
+}
+
+.dialog-header h3 {
+    margin: 0;
+    color: #fff;
+}
+
+.dialog-close {
+    background: none;
+    border: none;
+    color: #999;
+    font-size: 24px;
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+}
+
+.dialog-close:hover {
+    background: #333;
+    color: #fff;
+}
+
+.dialog-content {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 20px;
+    border-top: 1px solid #333;
+}
+
+.dialog-button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.dialog-button.cancel {
+    background: #333;
+    color: #fff;
+}
+
+.dialog-button.cancel:hover {
+    background: #444;
+}
+
+.dialog-button.select {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.dialog-button.select:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+}
+
+.dialog-button.select:disabled {
+    background: #333;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Bitstream list styles */
+.bitstream-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.bitstream-item {
+    padding: 15px;
+    background: #2a2a2a;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.bitstream-item:hover {
+    background: #333;
+}
+
+.bitstream-item.selected {
+    border-color: #667eea;
+    background: #2a2a3a;
+}
+
+.bitstream-name {
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.bitstream-size {
+    font-size: 12px;
+    color: #999;
+}
+
+.loading {
+    text-align: center;
+    color: #999;
+    padding: 40px;
+}
     transition: background 0.8s ease;
 }
 

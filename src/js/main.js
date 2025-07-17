@@ -3,6 +3,7 @@ import { scanForTiliqua } from './device-connection.js';
 import { loadArchive } from './archive-processing.js';
 import { showTab, addToGlobalLog } from './ui-helpers.js';
 import { getTiliquaHwVersion } from './globals.js';
+import { openBrowseDialog, closeBrowseDialog, selectBitstream } from './browse-bitstreams.js';
 import './flash-operations.js'; // Import for side effects (window.handleFlash)
 
 // Show loading indicator
@@ -72,5 +73,25 @@ document.addEventListener('DOMContentLoaded', () => {
             const slotId = content.dataset.content;
             handleFlash(slotId);
         });
+    });
+
+    // Browse button handlers
+    document.querySelectorAll('.browse-button').forEach(button => {
+        button.addEventListener('click', () => {
+            const slotId = button.dataset.slot;
+            openBrowseDialog(slotId);
+        });
+    });
+
+    // Browse dialog handlers
+    document.getElementById('browse-dialog-close').addEventListener('click', closeBrowseDialog);
+    document.getElementById('browse-cancel').addEventListener('click', closeBrowseDialog);
+    document.getElementById('browse-select').addEventListener('click', selectBitstream);
+    
+    // Close dialog on overlay click
+    document.getElementById('browse-dialog').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) {
+            closeBrowseDialog();
+        }
     });
 });

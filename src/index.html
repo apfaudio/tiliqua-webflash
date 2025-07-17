@@ -54,7 +54,10 @@
                 <div class="circle-content" data-content="0">
                     <div class="slot-info">Slot 0 (0x100000)</div>
                     <div class="file-input-wrapper">
-                        <label class="file-input-label" for="file-0">Choose Bitstream</label>
+                        <div class="bitstream-buttons">
+                            <label class="file-input-label" for="file-0">From File</label>
+                            <button class="browse-button" data-slot="0">Browse</button>
+                        </div>
                         <input type="file" accept=".tar.gz" id="file-0">
                         <button class="flash-button" disabled>Flash</button>
                     </div>
@@ -64,7 +67,10 @@
                 <div class="circle-content" data-content="1">
                     <div class="slot-info">Slot 1 (0x200000)</div>
                     <div class="file-input-wrapper">
-                        <label class="file-input-label" for="file-1">Choose Bitstream</label>
+                        <div class="bitstream-buttons">
+                            <label class="file-input-label" for="file-1">From File</label>
+                            <button class="browse-button" data-slot="1">Browse</button>
+                        </div>
                         <input type="file" accept=".tar.gz" id="file-1">
                         <button class="flash-button" disabled>Flash</button>
                     </div>
@@ -74,7 +80,10 @@
                 <div class="circle-content" data-content="2">
                     <div class="slot-info">Slot 2 (0x300000)</div>
                     <div class="file-input-wrapper">
-                        <label class="file-input-label" for="file-2">Choose Bitstream</label>
+                        <div class="bitstream-buttons">
+                            <label class="file-input-label" for="file-2">From File</label>
+                            <button class="browse-button" data-slot="2">Browse</button>
+                        </div>
                         <input type="file" accept=".tar.gz" id="file-2">
                         <button class="flash-button" disabled>Flash</button>
                     </div>
@@ -84,7 +93,10 @@
                 <div class="circle-content" data-content="3">
                     <div class="slot-info">Slot 3 (0x400000)</div>
                     <div class="file-input-wrapper">
-                        <label class="file-input-label" for="file-3">Choose Bitstream</label>
+                        <div class="bitstream-buttons">
+                            <label class="file-input-label" for="file-3">From File</label>
+                            <button class="browse-button" data-slot="3">Browse</button>
+                        </div>
                         <input type="file" accept=".tar.gz" id="file-3">
                         <button class="flash-button" disabled>Flash</button>
                     </div>
@@ -94,7 +106,10 @@
                 <div class="circle-content" data-content="4">
                     <div class="slot-info">Slot 4 (0x500000)</div>
                     <div class="file-input-wrapper">
-                        <label class="file-input-label" for="file-4">Choose Bitstream</label>
+                        <div class="bitstream-buttons">
+                            <label class="file-input-label" for="file-4">From File</label>
+                            <button class="browse-button" data-slot="4">Browse</button>
+                        </div>
                         <input type="file" accept=".tar.gz" id="file-4">
                         <button class="flash-button" disabled>Flash</button>
                     </div>
@@ -104,7 +119,10 @@
                 <div class="circle-content" data-content="5">
                     <div class="slot-info">Slot 5 (0x600000)</div>
                     <div class="file-input-wrapper">
-                        <label class="file-input-label" for="file-5">Choose Bitstream</label>
+                        <div class="bitstream-buttons">
+                            <label class="file-input-label" for="file-5">From File</label>
+                            <button class="browse-button" data-slot="5">Browse</button>
+                        </div>
                         <input type="file" accept=".tar.gz" id="file-5">
                         <button class="flash-button" disabled>Flash</button>
                     </div>
@@ -114,7 +132,10 @@
                 <div class="circle-content" data-content="6">
                     <div class="slot-info">Slot 6 (0x700000)</div>
                     <div class="file-input-wrapper">
-                        <label class="file-input-label" for="file-6">Choose Bitstream</label>
+                        <div class="bitstream-buttons">
+                            <label class="file-input-label" for="file-6">From File</label>
+                            <button class="browse-button" data-slot="6">Browse</button>
+                        </div>
                         <input type="file" accept=".tar.gz" id="file-6">
                         <button class="flash-button" disabled>Flash</button>
                     </div>
@@ -124,7 +145,10 @@
                 <div class="circle-content" data-content="7">
                     <div class="slot-info">Slot 7 (0x800000)</div>
                     <div class="file-input-wrapper">
-                        <label class="file-input-label" for="file-7">Choose Bitstream</label>
+                        <div class="bitstream-buttons">
+                            <label class="file-input-label" for="file-7">From File</label>
+                            <button class="browse-button" data-slot="7">Browse</button>
+                        </div>
                         <input type="file" accept=".tar.gz" id="file-7">
                         <button class="flash-button" disabled>Flash</button>
                     </div>
@@ -134,7 +158,10 @@
                 <div class="circle-content" data-content="bootloader">
                     <div class="slot-info">Bootloader (0x000000)</div>
                     <div class="file-input-wrapper">
-                        <label class="file-input-label" for="file-bootloader">Choose Bitstream</label>
+                        <div class="bitstream-buttons">
+                            <label class="file-input-label" for="file-bootloader">From File</label>
+                            <button class="browse-button" data-slot="bootloader">Browse</button>
+                        </div>
                         <input type="file" accept=".tar.gz" id="file-bootloader">
                         <button class="flash-button" disabled>Flash</button>
                     </div>
@@ -152,6 +179,25 @@
         <div class="log-panel" id="log-panel">
             <h3>Log</h3>
             <div class="log-content" id="global-log"></div>
+        </div>
+    </div>
+
+    <!-- Browse Dialog -->
+    <div class="dialog-overlay" id="browse-dialog" style="display: none;">
+        <div class="dialog">
+            <div class="dialog-header">
+                <h3>Browse Bitstreams</h3>
+                <button class="dialog-close" id="browse-dialog-close">&times;</button>
+            </div>
+            <div class="dialog-content">
+                <div class="bitstream-list" id="bitstream-list">
+                    <div class="loading">Loading bitstreams...</div>
+                </div>
+            </div>
+            <div class="dialog-footer">
+                <button class="dialog-button cancel" id="browse-cancel">Cancel</button>
+                <button class="dialog-button select" id="browse-select" disabled>Select</button>
+            </div>
         </div>
     </div>
 
