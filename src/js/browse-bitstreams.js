@@ -33,7 +33,7 @@ export async function openBrowseDialog(slotId) {
         setupFilterButtons();
         
         // Render bitstream list
-        renderBitstreams();
+        await renderBitstreams();
         
     } catch (error) {
         console.error('Failed to load bitstreams:', error);
@@ -105,24 +105,41 @@ function setupFilterButtons() {
                 
                 // Update filter
                 currentFilter = buttonId.replace('filter-', '');
-                renderBitstreams();
+                renderBitstreams(); // Note: not awaited to keep UI responsive
             });
         }
     });
 }
 
-function filterBitstreams(bitstreams) {
-    if (currentFilter === 'all') {
-        return bitstreams;
-    } else if (currentFilter === 'cpu') {
-        return bitstreams.filter(b => b.tags.includes('CPU'));
-    } else if (currentFilter === 'video') {
-        return bitstreams.filter(b => b.tags.includes('Video'));
+async function filterBitstreams(bitstreams) {
+    let filtered = bitstreams;
+    
+    // First filter by hardware revision compatibility
+    const { getTiliquaHwVersion } = await import('./globals.js');
+    //const connectedHwRev = 4; // XXX test browse feature
+    const connectedHwRev = getTiliquaHwVersion();
+    
+    if (connectedHwRev !== null) {
+        filtered = filtered.filter(b => {
+            // Show bitstreams that either:
+            // 1. Have matching hw_rev
+            // 2. Have no hw_rev specified (assume compatible)
+            return b.hw_rev === null || b.hw_rev === connectedHwRev;
+        });
     }
-    return bitstreams;
+    
+    // Then filter by tag selection
+    if (currentFilter === 'all') {
+        return filtered;
+    } else if (currentFilter === 'cpu') {
+        return filtered.filter(b => b.tags.includes('CPU'));
+    } else if (currentFilter === 'video') {
+        return filtered.filter(b => b.tags.includes('Video'));
+    }
+    return filtered;
 }
 
-function renderBitstreams() {
+async function renderBitstreams() {
     const listContainer = document.getElementById('bitstream-list');
     const selectButton = document.getElementById('browse-select');
     
@@ -131,7 +148,7 @@ function renderBitstreams() {
         return;
     }
     
-    const filteredBitstreams = filterBitstreams(allBitstreams);
+    const filteredBitstreams = await filterBitstreams(allBitstreams);
     
     if (filteredBitstreams.length === 0) {
         listContainer.innerHTML = '<div class="loading">No bitstreams match the current filter</div>';

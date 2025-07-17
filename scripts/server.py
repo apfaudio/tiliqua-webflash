@@ -41,10 +41,12 @@ def generate_bitstreams_list(bitstreams_dir, build_dir):
             display_name = file_path.stem.replace('.tar', '')  # Default fallback
             brief = None
             tags = []
+            hw_rev = None
             
             if manifest:
                 display_name = manifest.get('name', display_name)
                 brief = manifest.get('brief', None)
+                hw_rev = manifest.get('hw_rev', None)
                 
                 # Detect CPU tag - check if any region has 'firmware.bin'
                 regions = manifest.get('regions', [])
@@ -62,6 +64,7 @@ def generate_bitstreams_list(bitstreams_dir, build_dir):
                 'name': display_name,
                 'brief': brief,
                 'tags': tags,
+                'hw_rev': hw_rev,
                 'size': stat.st_size
             })
     
