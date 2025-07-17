@@ -16,6 +16,7 @@ def build_application():
     files_to_copy = [
         ("src/index.html", "index.html"),
         ("src/bg.jpg", "bg.jpg"),
+        ("src/styles.css", "styles.css"),
         ("tiliqua/gateware/src/tiliqua/flash_core.py", "flash_core.py"),
         ("coi-serviceworker/coi-serviceworker.js", "coi-serviceworker.js"),
     ]
@@ -29,6 +30,14 @@ def build_application():
         
         shutil.copy2(src, dest)
         print(f"Copied {src_path} -> build/{dest_name}")
+    
+    # Copy entire js directory
+    js_src_dir = project_root / "src" / "js"
+    js_dest_dir = build_dir / "js"
+    
+    if js_src_dir.exists():
+        shutil.copytree(js_src_dir, js_dest_dir)
+        print(f"Copied src/js/ -> build/js/")
     
     print(f"Build completed successfully in {build_dir}")
 
