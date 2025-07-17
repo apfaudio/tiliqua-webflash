@@ -1,5 +1,5 @@
 import { getPyodide, loadedArchives } from './globals.js';
-import { addToGlobalLog, displayRegions } from './ui-helpers.js';
+import { displayRegions } from './ui-helpers.js';
 
 // Tar archive reader
 class TarArchive {

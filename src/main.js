@@ -2,7 +2,7 @@ import { initPyodide } from './pyodide-init.js';
 import { scanForTiliqua } from './device-connection.js';
 import { loadArchive } from './archive-processing.js';
 import { showTab, addToGlobalLog } from './ui-helpers.js';
-import { loadedArchives, getTiliquaHwVersion } from './globals.js';
+import { getTiliquaHwVersion } from './globals.js';
 import './flash-operations.js'; // Import for side effects (window.handleFlash)
 
 // Show loading indicator

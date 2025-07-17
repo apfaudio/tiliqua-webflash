@@ -1,7 +1,6 @@
-import { loadedArchives, setCurrentSlot, getCurrentSlot } from './globals.js';
+import { setCurrentSlot } from './globals.js';
 
 export function showGlobalMessage(message, type = 'info') {
-    const timestamp = new Date().toLocaleTimeString();
     const logContent = document.getElementById('global-log');
     const logLine = document.createElement('div');
     logLine.className = `log-line ${type}`;
@@ -11,7 +10,6 @@ export function showGlobalMessage(message, type = 'info') {
 }
 
 export function addToGlobalLog(slotId, message, type = 'info') {
-    const timestamp = new Date().toLocaleTimeString();
     const lines = message.split('\n');
     lines.forEach(line => {
         if (line.trim()) {
