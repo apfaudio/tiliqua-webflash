@@ -37,39 +37,19 @@ def generate_bitstreams_list(bitstreams_dir, build_dir):
             # Try to read manifest
             manifest = read_manifest_from_tarfile(file_path)
             
-            # Get name and brief from manifest, fallback to filename
-            display_name = file_path.stem.replace('.tar', '')  # Default fallback
-            brief = None
-            tags = []
-            hw_rev = None
-            
-            if manifest:
-                display_name = manifest.get('name', display_name)
-                brief = manifest.get('brief', None)
-                hw_rev = manifest.get('hw_rev', None)
-                
-                # Detect CPU tag - check if any region has 'firmware.bin'
-                regions = manifest.get('regions', [])
-                has_firmware = any(region.get('filename') == 'firmware.bin' for region in regions)
-                if has_firmware:
-                    tags.append('CPU')
-                
-                # Detect Video tag - check if video field is not '<none>'
-                video = manifest.get('video', '<none>')
-                if video != '<none>':
-                    tags.append('Video')
-            
             bitstreams.append({
                 'filename': file_path.name,
-                'name': display_name,
-                'brief': brief,
-                'tags': tags,
-                'hw_rev': hw_rev,
+                'manifest': manifest,  # Include full manifest
                 'size': stat.st_size
             })
     
-    # Sort by name
-    bitstreams.sort(key=lambda x: x['name'])
+    # Sort by name (use manifest name if available, otherwise filename)
+    def get_sort_name(bitstream):
+        if bitstream['manifest'] and 'name' in bitstream['manifest']:
+            return bitstream['manifest']['name']
+        return bitstream['filename'].replace('.tar.gz', '')
+    
+    bitstreams.sort(key=get_sort_name)
     
     # Generate JavaScript file
     js_content = f"""// Auto-generated bitstreams list
