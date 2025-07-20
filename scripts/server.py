@@ -8,22 +8,32 @@ import tarfile
 from pathlib import Path
 
 
-def read_manifest_from_tarfile(file_path):
-    """Extract manifest.json from a .tar.gz file"""
+def read_manifest_and_size_from_tarfile(file_path):
+    """Extract manifest.json and calculate uncompressed size from a .tar.gz file"""
     try:
         with tarfile.open(file_path, 'r:gz') as tar:
+            manifest_data = None
+            uncompressed_size = 0
+            
+            # Calculate total uncompressed size of all members
+            for member in tar.getmembers():
+                if member.isfile():
+                    uncompressed_size += member.size
+            
+            # Try to extract manifest
             try:
                 manifest_member = tar.getmember('manifest.json')
                 manifest_file = tar.extractfile(manifest_member)
                 if manifest_file:
                     manifest_data = json.loads(manifest_file.read().decode('utf-8'))
-                    return manifest_data
             except KeyError:
                 # No manifest.json found
-                return None
+                pass
+                
+            return manifest_data, uncompressed_size
     except Exception as e:
         print(f"Warning: Could not read manifest from {file_path}: {e}")
-        return None
+        return None, 0
 
 def generate_bitstreams_list(bitstreams_dir, build_dir):
     """Generate a JavaScript file containing the list of available bitstreams"""
@@ -34,13 +44,14 @@ def generate_bitstreams_list(bitstreams_dir, build_dir):
         if file_path.is_file():
             stat = file_path.stat()
             
-            # Try to read manifest
-            manifest = read_manifest_from_tarfile(file_path)
+            # Try to read manifest and get uncompressed size
+            manifest, uncompressed_size = read_manifest_and_size_from_tarfile(file_path)
             
             bitstreams.append({
                 'filename': file_path.name,
                 'manifest': manifest,  # Include full manifest
-                'size': stat.st_size
+                'compressed_size': stat.st_size,
+                'uncompressed_size': uncompressed_size
             })
     
     # Sort by name (use manifest name if available, otherwise filename)

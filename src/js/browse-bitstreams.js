@@ -213,7 +213,7 @@ async function renderBitstreams() {
             <div class="bitstream-content">
                 <div class="bitstream-name">${name}</div>
                 ${briefHtml}
-                <div class="bitstream-size">${formatFileSize(bitstream.size)}</div>
+                <div class="bitstream-size">${formatBitstreamSizes(bitstream)}</div>
             </div>
             ${tagsHtml}
         `;
@@ -233,9 +233,14 @@ async function renderBitstreams() {
 }
 
 function formatFileSize(bytes) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    if (bytes === 0) return '0 KB';
+    const kb = Math.round(bytes / 1024);
+    return `${kb} KB`;
+}
+
+function formatBitstreamSizes(bitstream) {
+    const compressedSize = bitstream.compressed_size;
+    const uncompressedSize = bitstream.uncompressed_size;
+    
+    return `${formatFileSize(compressedSize)} (${formatFileSize(uncompressedSize)} uncompressed)`;
 }
