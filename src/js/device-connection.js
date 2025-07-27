@@ -73,8 +73,8 @@ export async function scanForTiliqua() {
             errorMsg = "WebUSB is not supported in this browser";
             additionalInfo = "Please use Chrome, Edge, or another Chromium-based browser. WebUSB requires a Chromium-based browser.";
         }
-        showGlobalMessage(`Could not find Tiliqua debugger: ${errorMsg}`);
-        showGlobalMessage(additionalInfo);
+        showGlobalMessage(`Could not find Tiliqua debugger: ${errorMsg}`, 'error');
+        showGlobalMessage(additionalInfo, 'error');
         const deviceInfo = document.getElementById('device-info');
         deviceInfo.textContent = `Error: ${errorMsg}`;
         deviceInfo.className = 'device-info error';

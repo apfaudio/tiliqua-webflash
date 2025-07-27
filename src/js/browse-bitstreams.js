@@ -75,6 +75,10 @@ export async function openBrowseDialog(slotId) {
     } catch (error) {
         console.error('Failed to load bitstreams:', error);
         listContainer.innerHTML = `<div class="loading">Error loading bitstreams: ${error.message}</div>`;
+        
+        // Also log the error and open log panel
+        const { showGlobalMessage } = await import('./ui-helpers.js');
+        showGlobalMessage(`Failed to load bitstreams: ${error.message}`, 'error');
     }
 }
 

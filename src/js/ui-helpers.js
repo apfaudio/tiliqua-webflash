@@ -7,6 +7,11 @@ export function showGlobalMessage(message, type = 'info') {
     logLine.innerHTML = `${message}`;
     logContent.appendChild(logLine);
     logContent.scrollTop = logContent.scrollHeight;
+    
+    // Auto-open log panel for error messages
+    if (type === 'error') {
+        openLogPanel();
+    }
 }
 
 export function addToGlobalLog(slotId, message, type = 'info') {
@@ -28,6 +33,11 @@ export function addToGlobalLog(slotId, message, type = 'info') {
         }
     }
     logContent.scrollTop = logContent.scrollHeight;
+    
+    // Auto-open log panel for error messages
+    if (type === 'error') {
+        openLogPanel();
+    }
     
     // Update progress log if flash operation is in progress
     updateProgressLog();
@@ -145,7 +155,7 @@ export function updateFlashLoadingMessage(message) {
     const flashLoading = document.getElementById('flash-loading');
     const loadingText = flashLoading.querySelector('.loading-text');
     if (loadingText) {
-        loadingText.innerHTML = `${message}<br><span style="font-size: 16px; opacity: 0.7;">See log panel →</span>`;
+        loadingText.innerHTML = `${message}`;
     }
 }
 
@@ -168,6 +178,13 @@ export function updateSlotToFlashedStatus(slotId, manifest) {
         if (slotInfo) {
             slotInfo.innerHTML = `Slot ${slotId} <span class="slot-name">${manifest.name}</span>`;
         }
+    }
+}
+
+export function openLogPanel() {
+    const logPanel = document.getElementById('log-panel');
+    if (logPanel && !logPanel.classList.contains('show')) {
+        logPanel.classList.add('show');
     }
 }
 
