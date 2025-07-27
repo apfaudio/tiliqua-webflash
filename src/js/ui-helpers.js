@@ -10,17 +10,23 @@ export function showGlobalMessage(message, type = 'info') {
 }
 
 export function addToGlobalLog(slotId, message, type = 'info') {
-    const lines = message.split('\n');
-    lines.forEach(line => {
-        if (line.trim()) {
-            const logContent = document.getElementById('global-log');
-            const logLine = document.createElement('div');
-            logLine.className = `log-line ${type}`;
-            logLine.innerHTML = `${line}`;
-            logContent.appendChild(logLine);
-            logContent.scrollTop = logContent.scrollHeight;
+    if (!message) return;
+    const logContent = document.getElementById('global-log');
+    if (message.includes('\n')) {
+        const logLine = document.createElement('div');
+        logLine.className = `log-line ${type}`;
+        logContent.appendChild(logLine);
+    } else {
+        var logLine = logContent.lastChild;
+        if (logLine) {
+            if (message.includes('\r')) {
+                logLine.innerHTML = message;
+            } else {
+                logLine.innerHTML += message;
+            }
         }
-    });
+    }
+    logContent.scrollTop = logContent.scrollHeight;
 }
 
 export function showTab(slotId) {
