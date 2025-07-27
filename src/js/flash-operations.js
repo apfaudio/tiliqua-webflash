@@ -1,5 +1,5 @@
 import { runOpenFPGALoader, Exit } from 'https://cdn.jsdelivr.net/npm/@yowasp/openfpgaloader/gen/bundle.js';
-import { showGlobalMessage, addToGlobalLog, updateSlotDisplay } from './ui-helpers.js';
+import { showGlobalMessage, addToGlobalLog, updateSlotDisplay, updateProgressLog } from './ui-helpers.js';
 import { loadedArchives, currentManifests, getPyodide, getTiliquaHwVersion } from './globals.js';
 
 // Make handleFlash global
@@ -14,6 +14,7 @@ window.handleFlash = async function(slotId) {
     if (!slotData) return;
 
     document.getElementById('flash-loading').classList.add('show');
+    updateProgressLog();
 
     try {
         const tiliquaHwVersion = getTiliquaHwVersion();
@@ -187,6 +188,7 @@ export async function readFlashManifests() {
     if (!pyodide || !tiliquaHwVersion) return;
     
     document.getElementById('flash-loading').classList.add('show');
+    updateProgressLog();
     showGlobalMessage("Reading current flash contents...");
     
     try {

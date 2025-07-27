@@ -48,7 +48,7 @@ export async function scanForTiliqua() {
             enableTabs();
             showTab('0');
 
-            await readFlashManifests();
+            //await readFlashManifests();
             
             loadedArchives.forEach((data, slotId) => {
                 const button = document.querySelector(`[data-content="${slotId}"] .flash-button`);

@@ -26,6 +26,9 @@
            <span style="font-size: 16px; opacity: 0.7;">See log panel →</span>
        </div>
        <div class="spinner"></div>
+       <div class="progress-log" id="progress-log">
+           <div class="progress-log-content" id="progress-log-content"></div>
+       </div>
    </div>
 
     <div class="main-container">
@@ -177,6 +180,9 @@
         </div>
 
         <div class="log-panel" id="log-panel">
+            <button class="log-toggle-icon" id="log-toggle-button" title="Toggle Log Panel">
+                <span class="toggle-arrow">›</span>
+            </button>
             <h3>Log</h3>
             <div class="log-content" id="global-log"></div>
         </div>

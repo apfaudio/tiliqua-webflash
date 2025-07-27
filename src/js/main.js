@@ -20,6 +20,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // Scan button handler
     document.getElementById('scan-button').addEventListener('click', scanForTiliqua);
     
+    // Log toggle button handler
+    document.getElementById('log-toggle-button').addEventListener('click', () => {
+        const logPanel = document.getElementById('log-panel');
+        
+        if (logPanel.classList.contains('show')) {
+            logPanel.classList.remove('show');
+        } else {
+            logPanel.classList.add('show');
+        }
+    });
+    
     // Tab button handlers
     document.querySelectorAll('.tab-button').forEach(tab => {
         tab.addEventListener('click', (e) => {

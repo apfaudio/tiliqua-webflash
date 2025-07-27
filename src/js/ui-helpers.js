@@ -15,18 +15,22 @@ export function addToGlobalLog(slotId, message, type = 'info') {
     if (message.includes('\n')) {
         const logLine = document.createElement('div');
         logLine.className = `log-line ${type}`;
+        logLine.textContent = message;
         logContent.appendChild(logLine);
     } else {
         var logLine = logContent.lastChild;
         if (logLine) {
             if (message.includes('\r')) {
-                logLine.innerHTML = message;
+                logLine.textContent = message;
             } else {
-                logLine.innerHTML += message;
+                logLine.textContent += message;
             }
         }
     }
     logContent.scrollTop = logContent.scrollHeight;
+    
+    // Update progress log if flash operation is in progress
+    updateProgressLog();
 }
 
 export function showTab(slotId) {
@@ -134,5 +138,41 @@ export function displayRegions(slotId, manifest) {
     // Re-add the status element if it existed
     if (existingStatus) {
         regionsDiv.appendChild(existingStatus);
+    }
+}
+
+export function updateProgressLog() {
+    const flashLoading = document.getElementById('flash-loading');
+    const progressLogContent = document.getElementById('progress-log-content');
+    
+    // Only update if flash operation is in progress
+    if (!flashLoading.classList.contains('show') || !progressLogContent) {
+        return;
+    }
+    
+    // Get last 5 log entries from the main log
+    const globalLog = document.getElementById('global-log');
+    const allLogLines = Array.from(globalLog.children);
+    const lastLines = allLogLines.slice(-5);
+    
+    // Clear progress log content
+    progressLogContent.innerHTML = '';
+    
+    // Always create exactly 5 lines
+    for (let i = 0; i < 5; i++) {
+        const progressLine = document.createElement('div');
+        progressLine.className = 'log-line info';
+        
+        if (i < lastLines.length) {
+            // Use actual log line
+            const sourceLine = lastLines[i];
+            progressLine.className = sourceLine.className;
+            progressLine.textContent = sourceLine.textContent || ' ';
+        } else {
+            // Use empty placeholder line
+            progressLine.textContent = ' ';
+        }
+        
+        progressLogContent.appendChild(progressLine);
     }
 }
