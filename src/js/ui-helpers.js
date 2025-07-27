@@ -141,6 +141,36 @@ export function displayRegions(slotId, manifest) {
     }
 }
 
+export function updateFlashLoadingMessage(message) {
+    const flashLoading = document.getElementById('flash-loading');
+    const loadingText = flashLoading.querySelector('.loading-text');
+    if (loadingText) {
+        loadingText.innerHTML = `${message}<br><span style="font-size: 16px; opacity: 0.7;">See log panel →</span>`;
+    }
+}
+
+export function updateSlotToFlashedStatus(slotId, manifest) {
+    const manifestView = document.getElementById(`regions-${slotId}`);
+    if (!manifestView) return;
+    
+    // Remove any existing status and add "flashed" status
+    const existingStatus = manifestView.querySelector('.manifest-status');
+    if (existingStatus) existingStatus.remove();
+    
+    const status = document.createElement('span');
+    status.className = 'manifest-status flashed';
+    status.textContent = 'Flashed';
+    manifestView.appendChild(status);
+    
+    // Update slot name if available
+    if (manifest && manifest.name) {
+        const slotInfo = document.querySelector(`[data-content="${slotId}"] .slot-info`);
+        if (slotInfo) {
+            slotInfo.innerHTML = `Slot ${slotId} <span class="slot-name">${manifest.name}</span>`;
+        }
+    }
+}
+
 export function updateProgressLog() {
     const flashLoading = document.getElementById('flash-loading');
     const progressLogContent = document.getElementById('progress-log-content');

@@ -1,5 +1,5 @@
 import { runOpenFPGALoader, Exit } from 'https://cdn.jsdelivr.net/npm/@yowasp/openfpgaloader/gen/bundle.js';
-import { showGlobalMessage, addToGlobalLog, updateSlotDisplay, updateProgressLog } from './ui-helpers.js';
+import { showGlobalMessage, addToGlobalLog, updateSlotDisplay, updateProgressLog, updateFlashLoadingMessage, updateSlotToFlashedStatus } from './ui-helpers.js';
 import { loadedArchives, currentManifests, getPyodide, getTiliquaHwVersion, setCurrentFlashCommand } from './globals.js';
 
 // Make handleFlash global
@@ -13,7 +13,14 @@ window.handleFlash = async function(slotId) {
     const slotData = loadedArchives.get(slotId.toString());
     if (!slotData) return;
 
+    // Show loading with specific operation message
+    const bitstreamName = slotData.manifest.name || 'Unnamed bitstream';
+    const loadingMessage = slotId === 'bootloader' ? 
+        `Flashing '${bitstreamName}' to bootloader` : 
+        `Flashing '${bitstreamName}' to Slot ${slotId}`;
+    
     document.getElementById('flash-loading').classList.add('show');
+    updateFlashLoadingMessage(loadingMessage);
     updateProgressLog();
 
     try {
@@ -180,6 +187,9 @@ json.dumps(result)
         }
         
         addToGlobalLog(slotId, "\nFlashing completed successfully", 'success');
+        
+        // Update the slot status to "flashed" on success
+        updateSlotToFlashedStatus(slotId, slotData.manifest);
     } catch (error) {
         addToGlobalLog(slotId, `Flash failed: ${error.message}`, 'error');
    } finally {
@@ -194,6 +204,7 @@ export async function readFlashManifests() {
     if (!pyodide || !tiliquaHwVersion) return;
     
     document.getElementById('flash-loading').classList.add('show');
+    updateFlashLoadingMessage('Reading flash contents');
     updateProgressLog();
     showGlobalMessage("Reading current flash contents...");
     

@@ -895,6 +895,12 @@ input[type="file"] {
     border: 1px solid #666;
 }
 
+.manifest-status.flashed {
+    color: #4CAF50;
+    border: 1px solid #4CAF50;
+    background: rgba(76, 175, 80, 0.1);
+}
+
 .slot-info {
     font-size: 24px;
     margin-bottom: 30px;
