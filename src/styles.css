@@ -768,7 +768,7 @@ input[type="file"] {
     border: 1px solid #444;
     border-radius: 8px;
     padding: 15px;
-    height: 140px;
+    height: 160px;
     overflow-y: auto;
 }
 
@@ -777,7 +777,7 @@ input[type="file"] {
     font-size: 12px;
     color: #ccc;
     line-height: 20px;
-    height: 100px;
+    height: 120px;
 }
 
 .progress-log-content .log-line {
@@ -799,6 +799,15 @@ input[type="file"] {
 
 .progress-log-content .log-line.info {
     color: #fff;
+}
+
+.progress-log-content .log-line.command {
+    color: #51cf66;
+    font-weight: bold;
+    white-space: pre-wrap;
+    height: auto;
+    min-height: 20px;
+    overflow: visible;
 }
 
 @media (max-width: 1200px) {

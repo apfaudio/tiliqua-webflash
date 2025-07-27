@@ -42,3 +42,14 @@ export function setTiliquaHwVersion(version) {
 export function setCurrentSlot(slot) {
     _currentSlot = slot;
 }
+
+// Current flash command
+let _currentFlashCommand = '';
+
+export function getCurrentFlashCommand() {
+    return _currentFlashCommand;
+}
+
+export function setCurrentFlashCommand(command) {
+    _currentFlashCommand = command;
+}

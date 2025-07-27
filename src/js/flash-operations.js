@@ -1,6 +1,6 @@
 import { runOpenFPGALoader, Exit } from 'https://cdn.jsdelivr.net/npm/@yowasp/openfpgaloader/gen/bundle.js';
 import { showGlobalMessage, addToGlobalLog, updateSlotDisplay, updateProgressLog } from './ui-helpers.js';
-import { loadedArchives, currentManifests, getPyodide, getTiliquaHwVersion } from './globals.js';
+import { loadedArchives, currentManifests, getPyodide, getTiliquaHwVersion, setCurrentFlashCommand } from './globals.js';
 
 // Make handleFlash global
 window.handleFlash = async function(slotId) {
@@ -152,6 +152,11 @@ json.dumps(result)
                 
                 args.push('data');
                 
+                // Set current command for progress panel
+                const commandStr = `openFPGALoader ${args.slice(0, -1).join(' ')} ${op.filename}`;
+                setCurrentFlashCommand(commandStr);
+                updateProgressLog();
+                
                 await runOpenFPGALoader(args, filesIn, {
                     stdout: (data) => {
                         if (data) {
@@ -178,6 +183,7 @@ json.dumps(result)
     } catch (error) {
         addToGlobalLog(slotId, `Flash failed: ${error.message}`, 'error');
    } finally {
+       setCurrentFlashCommand('');
        document.getElementById('flash-loading').classList.remove('show');
    }
 };
@@ -284,6 +290,7 @@ json.dumps(info.to_dict())
     } catch (error) {
         showGlobalMessage(`Failed to read flash manifests: ${error.message}`, 'error');
     } finally {
+       setCurrentFlashCommand('');
        document.getElementById('flash-loading').classList.remove('show');
     }
 }

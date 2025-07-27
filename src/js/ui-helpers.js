@@ -1,4 +1,4 @@
-import { setCurrentSlot } from './globals.js';
+import { setCurrentSlot, getCurrentFlashCommand } from './globals.js';
 
 export function showGlobalMessage(message, type = 'info') {
     const logContent = document.getElementById('global-log');
@@ -150,16 +150,28 @@ export function updateProgressLog() {
         return;
     }
     
-    // Get last 5 log entries from the main log
+    // Get current command and last 4 log entries
+    const currentCommand = getCurrentFlashCommand();
     const globalLog = document.getElementById('global-log');
     const allLogLines = Array.from(globalLog.children);
-    const lastLines = allLogLines.slice(-5);
+    const lastLines = allLogLines.slice(-4);
     
     // Clear progress log content
     progressLogContent.innerHTML = '';
     
-    // Always create exactly 5 lines
-    for (let i = 0; i < 5; i++) {
+    // First line: current command (or empty if no command)
+    const commandLine = document.createElement('div');
+    if (currentCommand) {
+        commandLine.className = 'log-line command';
+        commandLine.textContent = `$ ${currentCommand}`;
+    } else {
+        commandLine.className = 'log-line info';
+        commandLine.textContent = ' ';
+    }
+    progressLogContent.appendChild(commandLine);
+    
+    // Next 4 lines: last log entries
+    for (let i = 0; i < 4; i++) {
         const progressLine = document.createElement('div');
         progressLine.className = 'log-line info';
         
