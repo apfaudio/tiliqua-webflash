@@ -105,17 +105,14 @@ export async function selectBitstream() {
         const { loadArchive } = await import('./archive-processing.js');
         await loadArchive(file, currentSlot);
         
-        // Update the UI to show the selected file
-        const label = document.querySelector(`label[for="file-${currentSlot}"]`);
-        if (label) {
-            label.textContent = getBitstreamName(selectedBitstream);
-        }
-        
-        // Enable flash button if connected
-        const { getTiliquaHwVersion } = await import('./globals.js');
-        if (getTiliquaHwVersion()) {
-            const button = document.querySelector(`[data-content="${currentSlot}"] .flash-button`);
-            if (button) {
+        // Update flash button text with bitstream name
+        const button = document.querySelector(`[data-content="${currentSlot}"] .flash-button`);
+        if (button) {
+            const bitstreamName = getBitstreamName(selectedBitstream);
+            button.textContent = `Flash '${bitstreamName}'`;
+            // Enable flash button if connected
+            const { getTiliquaHwVersion } = await import('./globals.js');
+            if (getTiliquaHwVersion()) {
                 button.disabled = false;
             }
         }

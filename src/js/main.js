@@ -58,15 +58,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (file) {
                 try {
                     await loadArchive(file, slotId);
-                    // Update file label
-                    const label = document.querySelector(`label[for="${e.target.id}"]`);
-                    if (label) {
-                        label.textContent = file.name;
-                    }
-                    // Enable flash button if connected
-                    if (getTiliquaHwVersion()) {
-                        const button = document.querySelector(`[data-content="${slotId}"] .flash-button`);
-                        if (button) {
+                    // Update flash button text with bitstream name
+                    const button = document.querySelector(`[data-content="${slotId}"] .flash-button`);
+                    if (button) {
+                        const bitstreamName = file.name.replace('.tar.gz', '').replace('.tar', '');
+                        button.textContent = `Flash '${bitstreamName}'`;
+                        // Enable flash button if connected
+                        if (getTiliquaHwVersion()) {
                             button.disabled = false;
                         }
                     }
