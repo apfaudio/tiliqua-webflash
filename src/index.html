@@ -8,29 +8,80 @@
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
         body {
-            font-family: monospace;
-            margin: 20px;
-            background: #1e1e1e;
-            color: #d4d4d4;
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #4af;
+            padding: 20px;
+            line-height: 1.6;
         }
         h1 {
+            color: #4af;
+            font-size: 18px;
+            font-weight: normal;
             margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
         }
         .controls {
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
-        button, input, select {
-            font-family: monospace;
-            padding: 8px 12px;
-            margin-right: 10px;
-            font-size: 14px;
+        button, select {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #4af;
+            border: 1px solid #4af;
+            padding: 6px 12px;
+            margin-right: 8px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        button:hover:not(:disabled), select:hover:not(:disabled) {
+            background: #4af;
+            color: #000;
+        }
+        button:disabled, select:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        label[for="archive"] {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #4af;
+            border: 1px solid #4af;
+            padding: 6px 12px;
+            margin-right: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            display: inline-block;
+        }
+        label[for="archive"]:hover {
+            background: #4af;
+            color: #000;
+        }
+        label[for="archive"].disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        #status {
+            color: #4af;
+            font-size: 13px;
         }
         #terminal {
             margin-top: 20px;
-        }
-        #status {
-            margin-left: 10px;
+            border: 1px solid #4af;
+            padding: 10px;
         }
     </style>
 </head>
@@ -43,6 +94,7 @@
     </div>
 
     <div class="controls">
+        <label for="archive" class="disabled" id="archive-label">Choose File</label>
         <input type="file" id="archive" accept=".tar.gz" disabled>
         <select id="slot" disabled>
             <option value="null">Bootloader</option>
@@ -72,8 +124,8 @@ let term = null;
 function initTerminal() {
     term = new Terminal({
         theme: {
-            background: '#1e1e1e',
-            foreground: '#d4d4d4'
+            background: '#000',
+            foreground: '#fff'
         },
         convertEol: true
     });
@@ -190,6 +242,7 @@ async function scanForTiliqua() {
         statusEl.style.color = '#4CAF50';
 
         document.getElementById('archive').disabled = false;
+        document.getElementById('archive-label').classList.remove('disabled');
         return tiliquaHwVersion;
 
     } catch (error) {
@@ -208,6 +261,7 @@ async function handleFileSelect(event) {
     if (file) {
         selectedFile = await file.arrayBuffer();
         log(`Loaded: ${file.name} (${selectedFile.byteLength} bytes)`);
+        document.getElementById('archive-label').textContent = file.name;
         document.getElementById('slot').disabled = false;
         document.getElementById('flash').disabled = false;
     }
