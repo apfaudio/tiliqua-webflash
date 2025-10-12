@@ -69,19 +69,18 @@ let tiliquaHwVersion = null;
 let selectedFile = null;
 let term = null;
 
-// Initialize xterm.js
 function initTerminal() {
     term = new Terminal({
         theme: {
             background: '#1e1e1e',
             foreground: '#d4d4d4'
-        }
+        },
+        convertEol: true
     });
     term.open(document.getElementById('terminal'));
     term.writeln('Terminal initialized. Waiting for Pyodide...');
 }
 
-// Log to terminal
 function log(message, style = '') {
     if (term) {
         term.writeln(style + message + '\x1b[0m');
@@ -326,20 +325,20 @@ json.dumps(result)
 
             args.push('data');
 
+            log(`\x1b[34m$ openFPGALoader ${args.join(' ')}\x1b[0m`);
+
             const filesIn = { 'data': data };
 
             try {
                 await runOpenFPGALoader(args, filesIn, {
                     stdout: (data) => {
-                        if (data) {
-                            const text = new TextDecoder().decode(data);
-                            log(text.trim());
+                        if (data && term) {
+                            term.write(new TextDecoder().decode(data));
                         }
                     },
                     stderr: (data) => {
-                        if (data) {
-                            const text = new TextDecoder().decode(data);
-                            log(`\x1b[33m${text.trim()}\x1b[0m`);
+                        if (data && term) {
+                            term.write(new TextDecoder().decode(data));
                         }
                     }
                 });
