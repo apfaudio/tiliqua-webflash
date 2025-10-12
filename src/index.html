@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tiliqua Flash Tool</title>
+    <meta charset="UTF-8">
+    <script src="coi-serviceworker.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+    <style>
+        body {
+            font-family: monospace;
+            margin: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        h1 {
+            margin-bottom: 20px;
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        button, input, select {
+            font-family: monospace;
+            padding: 8px 12px;
+            margin-right: 10px;
+            font-size: 14px;
+        }
+        #terminal {
+            margin-top: 20px;
+        }
+        #status {
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Tiliqua Flash Tool</h1>
+
+    <div class="controls">
+        <button id="connect">Connect to Tiliqua</button>
+        <span id="status">Not connected</span>
+    </div>
+
+    <div class="controls">
+        <input type="file" id="archive" accept=".tar.gz" disabled>
+        <select id="slot" disabled>
+            <option value="null">Bootloader</option>
+            <option value="0">Slot 0</option>
+            <option value="1">Slot 1</option>
+            <option value="2">Slot 2</option>
+            <option value="3">Slot 3</option>
+            <option value="4">Slot 4</option>
+            <option value="5">Slot 5</option>
+            <option value="6">Slot 6</option>
+            <option value="7">Slot 7</option>
+        </select>
+        <button id="flash" disabled>Flash</button>
+    </div>
+
+    <div id="terminal"></div>
+
+    <script type="text/python">
+import json
+import tarfile
+import io
+from dataclasses import dataclass
+from typing import Optional, List
+from enum import Enum
+
+# Constants from tiliqua/gateware/src/rs/manifest/src/lib.rs
+FLASH_PAGE_SZ = 0x1000
+FLASH_SECTOR_SZ = 0x10000
+MANIFEST_MAGIC = 0xFEEDBEEF
+N_MANIFESTS = 8
+SLOT_BITSTREAM_BASE = 0x100000
+SLOT_SIZE = 0x100000
+MANIFEST_OFFSET = 0xF0000
+MANIFEST_SIZE = 0x1000
+
+# Type definitions (Python versions of Rust types)
+class RegionType(str, Enum):
+    Bitstream = "Bitstream"
+    XipFirmware = "XipFirmware"
+    RamLoad = "RamLoad"
+    OptionStorage = "OptionStorage"
+    Manifest = "Manifest"
+
+@dataclass
+class MemoryRegion:
+    filename: str
+    region_type: str
+    spiflash_src: Optional[int]
+    psram_dst: Optional[int]
+    size: int
+    crc: Optional[int] = None
+
+    @staticmethod
+    def from_dict(d):
+        return MemoryRegion(
+            filename=d['filename'],
+            region_type=d['region_type'],
+            spiflash_src=d.get('spiflash_src'),
+            psram_dst=d.get('psram_dst'),
+            size=d['size'],
+            crc=d.get('crc')
+        )
+
+    def to_dict(self):
+        return {
+            'filename': self.filename,
+            'region_type': self.region_type,
+            'spiflash_src': self.spiflash_src,
+            'psram_dst': self.psram_dst,
+            'size': self.size,
+            'crc': self.crc
+        }
+
+@dataclass
+class BitstreamManifest:
+    hw_rev: int
+    name: str
+    sha: str
+    brief: str
+    video: str
+    external_pll_config: Optional[dict]
+    regions: List[MemoryRegion]
+    magic: int
+
+    @staticmethod
+    def from_dict(d):
+        return BitstreamManifest(
+            hw_rev=d['hw_rev'],
+            name=d['name'],
+            sha=d['sha'],
+            brief=d['brief'],
+            video=d['video'],
+            external_pll_config=d.get('external_pll_config'),
+            regions=[MemoryRegion.from_dict(r) for r in d['regions']],
+            magic=d['magic']
+        )
+
+    def to_dict(self):
+        return {
+            'hw_rev': self.hw_rev,
+            'name': self.name,
+            'sha': self.sha,
+            'brief': self.brief,
+            'video': self.video,
+            'external_pll_config': self.external_pll_config,
+            'regions': [r.to_dict() for r in self.regions],
+            'magic': self.magic
+        }
+
+# SlotLayout class (copied from tiliqua/gateware/src/tiliqua/flash/spiflash_layout.py)
+class SlotLayout:
+    BOOTLOADER_BITSTREAM_ADDR = 0x00000
+    FIRMWARE_BASE_OFFSET = 0x90000
+    OPTIONS_BASE_OFFSET = 0xE0000
+
+    def __init__(self, slot_number: Optional[int] = None):
+        self.slot_number = slot_number
+
+    @property
+    def is_bootloader(self) -> bool:
+        return self.slot_number is None
+
+    @property
+    def bitstream_addr(self) -> int:
+        if self.is_bootloader:
+            return self.BOOTLOADER_BITSTREAM_ADDR
+        else:
+            return SLOT_BITSTREAM_BASE + (self.slot_number * SLOT_SIZE)
+
+    @property
+    def manifest_addr(self) -> int:
+        if self.is_bootloader:
+            return MANIFEST_OFFSET
+        else:
+            return self.bitstream_addr + MANIFEST_OFFSET
+
+    @property
+    def firmware_base(self) -> int:
+        if self.is_bootloader:
+            raise ValueError("Bootloader doesn't have firmware base (uses XiP)")
+        return self.FIRMWARE_BASE_OFFSET + ((1+self.slot_number) * SLOT_SIZE)
+
+    @property
+    def options_base(self) -> int:
+        if self.is_bootloader:
+            return self.OPTIONS_BASE_OFFSET
+        else:
+            return self.OPTIONS_BASE_OFFSET + ((1+self.slot_number) * SLOT_SIZE)
+
+    @property
+    def slot_start_addr(self) -> int:
+        return self.bitstream_addr
+
+    @property
+    def slot_end_addr(self) -> int:
+        return self.bitstream_addr + SLOT_SIZE
+
+# FlashableRegion class (copied from tiliqua/gateware/src/tiliqua/flash/spiflash_layout.py)
+class FlashableRegion:
+    def __init__(self, memory_region):
+        self.memory_region = memory_region
+
+    @property
+    def addr(self) -> int:
+        return self.memory_region.spiflash_src
+
+    @property
+    def size(self) -> int:
+        return self.memory_region.size
+
+    @property
+    def aligned_size(self) -> int:
+        return (self.size + FLASH_SECTOR_SZ - 1) & ~(FLASH_SECTOR_SZ - 1)
+
+    @property
+    def end_addr(self) -> int:
+        return self.addr + self.aligned_size
+
+    def __lt__(self, other):
+        return self.addr < other.addr
+
+# compute_concrete_regions_to_flash (copied from tiliqua/gateware/src/tiliqua/flash/spiflash_layout.py)
+def compute_concrete_regions_to_flash(manifest: BitstreamManifest, slot: Optional[int]):
+    layout = SlotLayout(slot)
+    regions_to_flash = []
+
+    ramload_base = None
+    if not layout.is_bootloader:
+        ramload_base = layout.firmware_base
+
+    # Update all regions with real SPIflash addresses
+    for region in manifest.regions:
+        if region.region_type == RegionType.Bitstream:
+            region.spiflash_src = layout.bitstream_addr
+        elif region.region_type == RegionType.Manifest:
+            region.spiflash_src = layout.manifest_addr
+        elif region.region_type == RegionType.XipFirmware:
+            assert region.spiflash_src is not None, "XipFirmware region missing spiflash_src"
+        elif region.region_type == RegionType.OptionStorage:
+            region.spiflash_src = layout.options_base
+        elif region.region_type == RegionType.RamLoad:
+            assert region.spiflash_src is None, "RamLoad region already has spiflash_src set"
+            region.spiflash_src = ramload_base
+            ramload_base += region.size
+            ramload_base = (ramload_base + FLASH_SECTOR_SZ - 1) & ~(FLASH_SECTOR_SZ - 1)
+
+    # Create list of regions that exist in SPI flash
+    for region in manifest.regions:
+        if region.spiflash_src is not None:
+            regions_to_flash.append(FlashableRegion(region))
+
+    # Check for regions exceeding slot boundary
+    for region in regions_to_flash:
+        if region.end_addr > layout.slot_end_addr:
+            raise ValueError(f"Region {region.memory_region.filename} exceeds slot boundary: "
+                           f"ends at 0x{region.end_addr:x}, slot ends at 0x{layout.slot_end_addr:x}")
+
+    # Check for overlaps
+    sorted_regions = sorted(regions_to_flash)
+    for i in range(len(sorted_regions) - 1):
+        curr_end = sorted_regions[i].end_addr
+        next_start = sorted_regions[i + 1].addr
+        if curr_end > next_start:
+            raise ValueError(f"Overlap detected between {sorted_regions[i].memory_region.filename} "
+                           f"(ends at 0x{curr_end:x}) and {sorted_regions[i+1].memory_region.filename} "
+                           f"(starts at 0x{next_start:x})")
+
+    return (manifest, regions_to_flash)
+
+def is_bootloader_archive(manifest: BitstreamManifest) -> bool:
+    return any(r.region_type == RegionType.XipFirmware for r in manifest.regions)
+
+# Main entry point called from JavaScript
+def process_archive(archive_bytes, slot, hw_rev):
+    """
+    Process a bitstream archive and return operations to execute.
+
+    Args:
+        archive_bytes: bytes of the tar.gz archive
+        slot: slot number (0-7) or None for bootloader
+        hw_rev: detected hardware revision
+
+    Returns:
+        dict with 'operations' list and 'manifest'
+    """
+    # Extract archive
+    archive_buffer = io.BytesIO(archive_bytes)
+    files = {}
+
+    with tarfile.open(fileobj=archive_buffer, mode='r:gz') as tar:
+        for member in tar.getmembers():
+            if member.isfile():
+                f = tar.extractfile(member)
+                files[member.name] = f.read()
+
+    # Parse manifest
+    manifest_json = files.get('manifest.json')
+    if not manifest_json:
+        raise ValueError("No manifest.json found in archive")
+
+    manifest_dict = json.loads(manifest_json.decode('utf-8'))
+    manifest = BitstreamManifest.from_dict(manifest_dict)
+
+    # Validate hardware
+    if manifest.hw_rev != hw_rev:
+        raise ValueError(f"Hardware mismatch: attached Tiliqua (hw=r{hw_rev}) does not match archive (hw=r{manifest.hw_rev})")
+
+    # Check if bootloader or user bitstream
+    is_bootloader = is_bootloader_archive(manifest)
+    if is_bootloader and slot is not None:
+        raise ValueError("Bootloader bitstream must be flashed to bootloader slot (select 'Bootloader' option)")
+    elif not is_bootloader and slot is None:
+        raise ValueError("User bitstream requires a slot selection (0-7)")
+
+    # Compute concrete regions
+    concrete_manifest, regions_to_flash = compute_concrete_regions_to_flash(manifest, slot)
+
+    # Update manifest in files
+    files['manifest.json'] = json.dumps(concrete_manifest.to_dict()).encode('utf-8')
+
+    # Generate operations
+    operations = []
+    for i, region in enumerate(sorted(regions_to_flash)):
+        if region.memory_region.region_type == RegionType.OptionStorage:
+            continue  # Skip option storage unless explicitly erasing
+
+        filename = region.memory_region.filename
+        if filename not in files:
+            raise ValueError(f"File {filename} referenced in manifest but not found in archive")
+
+        data = files[filename]
+
+        operations.append({
+            'filename': filename,
+            'data': list(data),  # Convert bytes to list for JSON
+            'offset': region.addr,
+            'file_type': 'raw',
+            'skip_reset': i < len(regions_to_flash) - 1
+        })
+
+    return {
+        'operations': operations,
+        'manifest': concrete_manifest.to_dict(),
+        'is_bootloader': is_bootloader
+    }
+    </script>
+
+    <script type="module">
+import { runOpenFPGALoader, Exit } from 'https://cdn.jsdelivr.net/npm/@yowasp/openfpgaloader/gen/bundle.js';
+
+// Global state
+let pyodide = null;
+let tiliquaHwVersion = null;
+let selectedFile = null;
+let term = null;
+
+// Initialize xterm.js
+function initTerminal() {
+    term = new Terminal({
+        theme: {
+            background: '#1e1e1e',
+            foreground: '#d4d4d4'
+        }
+    });
+    term.open(document.getElementById('terminal'));
+    term.writeln('Terminal initialized. Waiting for Pyodide...');
+}
+
+// Log to terminal
+function log(message, style = '') {
+    if (term) {
+        term.writeln(style + message + '\x1b[0m');
+    }
+}
+
+// Initialize Pyodide
+async function initPyodide() {
+    log('Loading Pyodide...');
+    pyodide = await loadPyodide();
+
+    // Run the embedded Python code
+    const pythonScript = document.querySelector('script[type="text/python"]').textContent;
+    await pyodide.runPythonAsync(pythonScript);
+
+    log('\x1b[32mPyodide initialized successfully\x1b[0m');
+    document.getElementById('connect').disabled = false;
+}
+
+// Scan for Tiliqua device
+async function scanForTiliqua() {
+    try {
+        log('Scanning for Tiliqua...');
+
+        // Try to get previously connected devices first
+        const devices = await navigator.usb.getDevices();
+        let tiliquaDevice = null;
+
+        for (const device of devices) {
+            if (device.productName &&
+                (device.productName.toLowerCase().includes('apfbug') ||
+                 device.productName.toLowerCase().includes('apf.audio'))) {
+                tiliquaDevice = device;
+                break;
+            }
+        }
+
+        // If not found, request device from user
+        if (!tiliquaDevice) {
+            tiliquaDevice = await navigator.usb.requestDevice({
+                filters: []
+            });
+        }
+
+        if (!tiliquaDevice) {
+            throw new Error("No device selected");
+        }
+
+        const productName = tiliquaDevice.productName || "";
+        if (!productName.toLowerCase().includes('apfbug') &&
+            !productName.toLowerCase().includes('apf.audio')) {
+            throw new Error("Selected device is not a Tiliqua debugger");
+        }
+
+        // Extract hardware version from product name (e.g. "Tiliqua R4")
+        const hwVersionMatch = productName.match(/R(\d+)/);
+        if (hwVersionMatch) {
+            tiliquaHwVersion = parseInt(hwVersionMatch[1]);
+            log(`\x1b[32mFound Tiliqua! (hw_rev=R${tiliquaHwVersion}, serial=${tiliquaDevice.serialNumber})\x1b[0m`);
+
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = `Connected: ${productName} (hw_rev=R${tiliquaHwVersion})`;
+            statusEl.style.color = '#4CAF50';
+
+            document.getElementById('archive').disabled = false;
+
+            return tiliquaHwVersion;
+        } else {
+            throw new Error("Found tiliqua-like device, product code is malformed (update RP2040?)");
+        }
+
+    } catch (error) {
+        let errorMsg = error.message || "Unknown error";
+        let additionalInfo = "Check device is on, plugged in ('dbg' port), permissions correct, RP2040 firmware up to date.";
+
+        if (error.message && error.message.includes("navigator.usb is undefined")) {
+            errorMsg = "WebUSB is not supported in this browser";
+            additionalInfo = "Use Chrome, Edge, or another Chromium-based browser. Firefox does not support WebUSB.";
+        } else if (!navigator.usb) {
+            errorMsg = "WebUSB is not supported in this browser";
+            additionalInfo = "Use Chrome, Edge, or another Chromium-based browser.";
+        }
+
+        log(`\x1b[31mError: ${errorMsg}\x1b[0m`);
+        log(`\x1b[33m${additionalInfo}\x1b[0m`);
+
+        const statusEl = document.getElementById('status');
+        statusEl.textContent = `Error: ${errorMsg}`;
+        statusEl.style.color = '#ff6b6b';
+        return null;
+    }
+}
+
+// Handle file selection
+async function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (file) {
+        selectedFile = await file.arrayBuffer();
+        log(`\x1b[36mLoaded archive: ${file.name} (${selectedFile.byteLength} bytes)\x1b[0m`);
+        document.getElementById('slot').disabled = false;
+        document.getElementById('flash').disabled = false;
+    }
+}
+
+// Handle flash operation
+async function handleFlash() {
+    if (!selectedFile || tiliquaHwVersion === null) {
+        log('\x1b[31mError: No file selected or device not connected\x1b[0m');
+        return;
+    }
+
+    const slotValue = document.getElementById('slot').value;
+    const slot = slotValue === 'null' ? null : parseInt(slotValue);
+
+    log('');
+    log('\x1b[1m=== Starting Flash Operation ===\x1b[0m');
+    log(`Slot: ${slot === null ? 'Bootloader' : slot}`);
+    log(`Hardware: R${tiliquaHwVersion}`);
+
+    try {
+        // Disable controls during flashing
+        document.getElementById('flash').disabled = true;
+        document.getElementById('slot').disabled = true;
+        document.getElementById('archive').disabled = true;
+
+        // Call Python to process archive
+        log('\x1b[36mProcessing archive...\x1b[0m');
+        pyodide.globals.set('archive_bytes', new Uint8Array(selectedFile));
+        pyodide.globals.set('slot_value', slot);
+        pyodide.globals.set('hw_rev_value', tiliquaHwVersion);
+
+        const result = await pyodide.runPythonAsync(`
+import json
+result = process_archive(bytes(archive_bytes), slot_value, hw_rev_value)
+json.dumps(result)
+        `);
+
+        const processedData = JSON.parse(result);
+
+        log(`\x1b[32mArchive processed successfully\x1b[0m`);
+        log(`Manifest: ${processedData.manifest.name}`);
+        log(`Type: ${processedData.is_bootloader ? 'Bootloader (XiP)' : 'User bitstream'}`);
+        log('');
+
+        // Show operations
+        log('\x1b[1mOperations to execute:\x1b[0m');
+        for (const op of processedData.operations) {
+            const args = [
+                '-c', 'dirtyJtag',
+                '-f',
+                '-o', `0x${op.offset.toString(16)}`,
+                '--file-type', op.file_type
+            ];
+            if (op.skip_reset) {
+                args.push('--skip-reset');
+            }
+            log(`  \$ openFPGALoader ${args.join(' ')} ${op.filename}`);
+        }
+        log('');
+
+        // Execute operations
+        log('\x1b[1mExecuting flash commands...\x1b[0m');
+        for (const op of processedData.operations) {
+            const data = new Uint8Array(op.data);
+
+            const args = [
+                '-c', 'dirtyJtag',
+                '-f',
+                '-o', `0x${op.offset.toString(16)}`,
+                '--file-type', op.file_type
+            ];
+
+            if (op.skip_reset) {
+                args.push('--skip-reset');
+            }
+
+            args.push('data');
+
+            const filesIn = { 'data': data };
+
+            try {
+                await runOpenFPGALoader(args, filesIn, {
+                    stdout: (data) => {
+                        if (data) {
+                            const text = new TextDecoder().decode(data);
+                            log(text.trim());
+                        }
+                    },
+                    stderr: (data) => {
+                        if (data) {
+                            const text = new TextDecoder().decode(data);
+                            log(`\x1b[33m${text.trim()}\x1b[0m`);
+                        }
+                    }
+                });
+            } catch (error) {
+                if (error instanceof Exit) {
+                    throw new Error(`Command failed with exit code ${error.code}`);
+                }
+                throw error;
+            }
+        }
+
+        log('');
+        log('\x1b[32m\x1b[1mFlashing completed successfully!\x1b[0m');
+
+    } catch (error) {
+        log('');
+        log(`\x1b[31m\x1b[1mFlash failed: ${error.message}\x1b[0m`);
+    } finally {
+        // Re-enable controls
+        document.getElementById('flash').disabled = false;
+        document.getElementById('slot').disabled = false;
+        document.getElementById('archive').disabled = false;
+    }
+}
+
+// Setup event listeners
+document.addEventListener('DOMContentLoaded', () => {
+    initTerminal();
+    initPyodide();
+
+    document.getElementById('connect').addEventListener('click', scanForTiliqua);
+    document.getElementById('archive').addEventListener('change', handleFileSelect);
+    document.getElementById('flash').addEventListener('click', handleFlash);
+});
+    </script>
+</body>
+</html>

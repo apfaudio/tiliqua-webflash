@@ -1,0 +1,3 @@
+[submodule "tiliqua"]
+	path = tiliqua
+	url = git@github.com:apfaudio/tiliqua.git

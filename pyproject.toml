@@ -1,0 +1,17 @@
+[project]
+name = "tiliqua-webflash2"
+version = "0.2.0"
+description = "Minimal webflasher for Tiliqua"
+authors = [
+    {name = "Sebastian Holzapfel", email = "me@sebholzapfel.com"},
+]
+dependencies = ["flask>=3.1.1"]
+requires-python = "==3.13.*"
+license = {text = "CERN-OHL-S-2.0"}
+
+[tool.pdm]
+distribution = false
+
+[tool.pdm.scripts]
+build-site = "python scripts/server.py --build-only"
+serve = "python scripts/server.py"
