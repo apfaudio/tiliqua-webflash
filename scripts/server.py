@@ -18,6 +18,9 @@ def build_application():
     (build_dir / "tiliqua" / "build").mkdir(parents=True)
     (build_dir / "rs" / "manifest" / "src").mkdir(parents=True)
 
+    # Create bitstreams directory
+    (build_dir / "bitstreams").mkdir(parents=True)
+
     files_to_copy = [
         ("src/index.html", "index.html"),
         ("src/coi-serviceworker.js", "coi-serviceworker.js"),
@@ -48,6 +51,41 @@ def build_application():
     (build_dir / "rs" / "__init__.py").touch()
     (build_dir / "rs" / "manifest" / "__init__.py").touch()
     (build_dir / "rs" / "manifest" / "src" / "__init__.py").touch()
+
+    # Copy bitstream archives from bitstreams/ directory
+    bitstreams_src = project_root / "bitstreams"
+    bitstreams_dest = build_dir / "bitstreams"
+    bitstreams_list = []
+
+    if bitstreams_src.exists():
+        copied_count = 0
+        for bitstream_file in sorted(bitstreams_src.glob("*.tar.gz")):
+            shutil.copy2(bitstream_file, bitstreams_dest / bitstream_file.name)
+            print(f"Copied bitstream: {bitstream_file.name}")
+
+            # Track bitstream info for JS generation
+            bitstreams_list.append({
+                'name': bitstream_file.name,
+                'size': bitstream_file.stat().st_size,
+                'url': f'bitstreams/{bitstream_file.name}'
+            })
+            copied_count += 1
+
+        if copied_count == 0:
+            print("No .tar.gz bitstreams found in bitstreams/ directory")
+    else:
+        print("No bitstreams/ directory found - skipping bitstream copy")
+
+    # Generate bitstreams.js with the list of available bitstreams
+    bitstreams_js_content = f"""// Auto-generated list of available bitstreams
+// This file is generated during the build process
+
+export const AVAILABLE_BITSTREAMS = {bitstreams_list};
+"""
+
+    bitstreams_js_path = build_dir / "bitstreams.js"
+    bitstreams_js_path.write_text(bitstreams_js_content)
+    print(f"Generated bitstreams.js with {len(bitstreams_list)} bitstream(s)")
 
     print(f"Build completed successfully in {build_dir}")
 

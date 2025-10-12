@@ -4,3 +4,6 @@ __pycache__/
 *.pyc
 .pdm-python
 pdm.lock
+
+# Bitstream archives (large binary files)
+bitstreams/*.tar.gz

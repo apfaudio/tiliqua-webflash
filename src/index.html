@@ -108,8 +108,13 @@
     </div>
 
     <div class="controls">
+        <select id="bitstream-source" disabled>
+            <option value="file">Upload File</option>
+            <option value="server">Select from Server</option>
+        </select>
         <label for="archive" class="disabled" id="archive-label">Choose File</label>
         <input type="file" id="archive" accept=".tar.gz" disabled>
+        <select id="server-bitstreams" class="disabled" disabled style="display:none;"></select>
         <select id="slot" disabled>
             <option value="null">Bootloader</option>
             <option value="0" selected>Slot 0</option>
@@ -128,6 +133,7 @@
 
     <script type="module">
 import { runOpenFPGALoader, Exit } from 'https://cdn.jsdelivr.net/npm/@yowasp/openfpgaloader/gen/bundle.js';
+import { AVAILABLE_BITSTREAMS } from './bitstreams.js';
 
 // Global state
 let pyodide = null;
@@ -257,8 +263,13 @@ async function scanForTiliqua() {
         statusEl.textContent = `Connected: ${productName}`;
         statusEl.style.color = '#4CAF50';
 
+        // Enable bitstream source selection
+        document.getElementById('bitstream-source').disabled = false;
+
+        // Enable file upload by default
         document.getElementById('archive').disabled = false;
         document.getElementById('archive-label').classList.remove('disabled');
+
         return tiliquaHwVersion;
 
     } catch (error) {
@@ -281,6 +292,56 @@ async function scanForTiliqua() {
     }
 }
 
+function handleBitstreamSourceChange() {
+    const sourceSelect = document.getElementById('bitstream-source');
+    const fileLabel = document.getElementById('archive-label');
+    const fileInput = document.getElementById('archive');
+    const serverSelect = document.getElementById('server-bitstreams');
+    const slotSelect = document.getElementById('slot');
+    const flashButton = document.getElementById('flash');
+
+    // Reset selection
+    selectedFile = null;
+    slotSelect.disabled = true;
+    flashButton.disabled = true;
+
+    if (sourceSelect.value === 'file') {
+        // Show file upload, hide server select
+        fileLabel.style.display = '';
+        fileInput.style.display = '';
+        fileLabel.classList.remove('disabled');
+        fileInput.disabled = false;
+        serverSelect.style.display = 'none';
+        serverSelect.disabled = true;
+        fileLabel.textContent = 'Choose File';
+    } else {
+        // Show server select, hide file upload
+        fileLabel.style.display = 'none';
+        fileInput.style.display = 'none';
+        serverSelect.style.display = '';
+        serverSelect.disabled = false;
+        serverSelect.classList.remove('disabled');
+        populateServerBitstreams();
+    }
+}
+
+function populateServerBitstreams() {
+    const serverSelect = document.getElementById('server-bitstreams');
+    serverSelect.innerHTML = '<option value="">Select a bitstream...</option>';
+
+    for (const bitstream of AVAILABLE_BITSTREAMS) {
+        const option = document.createElement('option');
+        option.value = bitstream.url;
+        const sizeKB = (bitstream.size / 1024).toFixed(1);
+        option.textContent = `${bitstream.name} (${sizeKB} KB)`;
+        serverSelect.appendChild(option);
+    }
+
+    if (AVAILABLE_BITSTREAMS.length === 0) {
+        serverSelect.innerHTML = '<option value="">No bitstreams available</option>';
+    }
+}
+
 async function handleFileSelect(event) {
     const file = event.target.files[0];
     if (file) {
@@ -289,6 +350,36 @@ async function handleFileSelect(event) {
         document.getElementById('archive-label').textContent = file.name;
         document.getElementById('slot').disabled = false;
         document.getElementById('flash').disabled = false;
+    }
+}
+
+async function handleServerBitstreamSelect(event) {
+    const url = event.target.value;
+    if (!url) {
+        selectedFile = null;
+        document.getElementById('slot').disabled = true;
+        document.getElementById('flash').disabled = true;
+        return;
+    }
+
+    try {
+        log(`Loading bitstream from server: ${url}`);
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        selectedFile = await response.arrayBuffer();
+        const fileName = url.split('/').pop();
+        log(`Loaded: ${fileName} (${selectedFile.byteLength} bytes)`);
+
+        document.getElementById('slot').disabled = false;
+        document.getElementById('flash').disabled = false;
+    } catch (error) {
+        log(`\x1b[31mFailed to load bitstream: ${error.message}\x1b[0m`);
+        selectedFile = null;
+        document.getElementById('slot').disabled = true;
+        document.getElementById('flash').disabled = true;
     }
 }
 
@@ -324,7 +415,20 @@ from tiliqua.flash.spiflash_layout import compute_concrete_regions_to_flash
 archive_buffer = io.BytesIO(bytes(archive_bytes))
 files = {}
 
-with tarfile.open(fileobj=archive_buffer, mode='r:gz') as tar:
+# Try to detect if it's gzipped or plain tar
+# Check for gzip magic bytes (0x1f 0x8b)
+archive_buffer.seek(0)
+first_two = archive_buffer.read(2)
+archive_buffer.seek(0)
+
+if first_two == b'\\x1f\\x8b':
+    # Gzipped tar
+    tar_mode = 'r:gz'
+else:
+    # Plain tar (might happen if browser/server decompressed it)
+    tar_mode = 'r'
+
+with tarfile.open(fileobj=archive_buffer, mode=tar_mode) as tar:
     for member in tar.getmembers():
         if member.isfile():
             f = tar.extractfile(member)
@@ -446,7 +550,9 @@ document.addEventListener('DOMContentLoaded', () => {
     initTerminal();
     initPyodide();
     document.getElementById('connect').addEventListener('click', scanForTiliqua);
+    document.getElementById('bitstream-source').addEventListener('change', handleBitstreamSourceChange);
     document.getElementById('archive').addEventListener('change', handleFileSelect);
+    document.getElementById('server-bitstreams').addEventListener('change', handleServerBitstreamSelect);
     document.getElementById('flash').addEventListener('click', handleFlash);
 });
     </script>
