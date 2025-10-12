@@ -93,16 +93,10 @@ async function initPyodide() {
     log('Loading Pyodide...');
     pyodide = await loadPyodide();
 
-    // Install required packages
-    log('Installing Python packages...');
     await pyodide.loadPackage('micropip');
     const micropip = pyodide.pyimport('micropip');
     await micropip.install(['dataclasses-json', 'colorama']);
 
-    // Mount the current directory so Python can import modules
-    log('Setting up Python module paths...');
-
-    // Create empty __init__.py files for module structure
     const emptyInitFiles = [
         'tiliqua/__init__.py',
         'tiliqua/build/__init__.py',
@@ -121,16 +115,12 @@ async function initPyodide() {
                 currentPath = currentPath ? `${currentPath}/${part}` : part;
                 try {
                     pyodide.FS.mkdir(currentPath);
-                } catch (e) {
-                    // Directory might already exist
-                }
+                } catch (e) {}
             }
         }
         pyodide.FS.writeFile(file, '');
-        log(`Created ${file}`);
     }
 
-    // Fetch and write all Python files to Pyodide's filesystem
     const pythonFiles = [
         'tiliqua/build/types.py',
         'tiliqua/flash/archive_loader.py',
@@ -141,50 +131,31 @@ async function initPyodide() {
     ];
 
     for (const file of pythonFiles) {
-        try {
-            log(`Fetching ${file}...`);
-            const response = await fetch(file);
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            const content = await response.text();
-            log(`Got ${content.length} bytes, writing to FS...`);
-
-            // Create directory structure
-            const dir = file.substring(0, file.lastIndexOf('/'));
-            if (dir) {
-                const parts = dir.split('/');
-                let currentPath = '';
-                for (const part of parts) {
-                    currentPath = currentPath ? `${currentPath}/${part}` : part;
-                    try {
-                        pyodide.FS.mkdir(currentPath);
-                    } catch (e) {
-                        // Directory might already exist, that's okay
-                    }
-                }
-            }
-
-            // Write file (even if empty)
-            pyodide.FS.writeFile(file, content || '');
-            log(`\x1b[32mLoaded ${file}\x1b[0m`);
-        } catch (e) {
-            log(`\x1b[31mError loading ${file}: ${e}\x1b[0m`);
-            console.error(`Full error for ${file}:`, e);
-            throw e;  // Stop initialization if we can't load required files
+        const response = await fetch(file);
+        if (!response.ok) {
+            throw new Error(`Failed to load ${file}: HTTP ${response.status}`);
         }
+        const content = await response.text();
+        const dir = file.substring(0, file.lastIndexOf('/'));
+        if (dir) {
+            const parts = dir.split('/');
+            let currentPath = '';
+            for (const part of parts) {
+                currentPath = currentPath ? `${currentPath}/${part}` : part;
+                try {
+                    pyodide.FS.mkdir(currentPath);
+                } catch (e) {}
+            }
+        }
+        pyodide.FS.writeFile(file, content);
     }
 
-    log('\x1b[32mPyodide initialized successfully\x1b[0m');
+    log('\x1b[32mReady\x1b[0m');
     document.getElementById('connect').disabled = false;
 }
 
-// Scan for Tiliqua device
 async function scanForTiliqua() {
     try {
-        log('Scanning for Tiliqua...');
-
-        // Try to get previously connected devices first
         const devices = await navigator.usb.getDevices();
         let tiliquaDevice = null;
 
@@ -197,15 +168,8 @@ async function scanForTiliqua() {
             }
         }
 
-        // If not found, request device from user
         if (!tiliquaDevice) {
-            tiliquaDevice = await navigator.usb.requestDevice({
-                filters: []
-            });
-        }
-
-        if (!tiliquaDevice) {
-            throw new Error("No device selected");
+            tiliquaDevice = await navigator.usb.requestDevice({ filters: [] });
         }
 
         const productName = tiliquaDevice.productName || "";
@@ -214,37 +178,24 @@ async function scanForTiliqua() {
             throw new Error("Selected device is not a Tiliqua debugger");
         }
 
-        // Extract hardware version from product name (e.g. "Tiliqua R4")
         const hwVersionMatch = productName.match(/R(\d+)/);
-        if (hwVersionMatch) {
-            tiliquaHwVersion = parseInt(hwVersionMatch[1]);
-            log(`\x1b[32mFound Tiliqua! (hw_rev=R${tiliquaHwVersion}, serial=${tiliquaDevice.serialNumber})\x1b[0m`);
-
-            const statusEl = document.getElementById('status');
-            statusEl.textContent = `Connected: ${productName} (hw_rev=R${tiliquaHwVersion})`;
-            statusEl.style.color = '#4CAF50';
-
-            document.getElementById('archive').disabled = false;
-
-            return tiliquaHwVersion;
-        } else {
-            throw new Error("Found tiliqua-like device, product code is malformed (update RP2040?)");
+        if (!hwVersionMatch) {
+            throw new Error("Product code is malformed (update RP2040?)");
         }
+
+        tiliquaHwVersion = parseInt(hwVersionMatch[1]);
+        log(`\x1b[32mConnected: ${productName} (R${tiliquaHwVersion}, ${tiliquaDevice.serialNumber})\x1b[0m`);
+
+        const statusEl = document.getElementById('status');
+        statusEl.textContent = `Connected: ${productName}`;
+        statusEl.style.color = '#4CAF50';
+
+        document.getElementById('archive').disabled = false;
+        return tiliquaHwVersion;
 
     } catch (error) {
-        let errorMsg = error.message || "Unknown error";
-        let additionalInfo = "Check device is on, plugged in ('dbg' port), permissions correct, RP2040 firmware up to date.";
-
-        if (error.message && error.message.includes("navigator.usb is undefined")) {
-            errorMsg = "WebUSB is not supported in this browser";
-            additionalInfo = "Use Chrome, Edge, or another Chromium-based browser. Firefox does not support WebUSB.";
-        } else if (!navigator.usb) {
-            errorMsg = "WebUSB is not supported in this browser";
-            additionalInfo = "Use Chrome, Edge, or another Chromium-based browser.";
-        }
-
-        log(`\x1b[31mError: ${errorMsg}\x1b[0m`);
-        log(`\x1b[33m${additionalInfo}\x1b[0m`);
+        const errorMsg = error.message || "Unknown error";
+        log(`\x1b[31m${errorMsg}\x1b[0m`);
 
         const statusEl = document.getElementById('status');
         statusEl.textContent = `Error: ${errorMsg}`;
@@ -253,21 +204,19 @@ async function scanForTiliqua() {
     }
 }
 
-// Handle file selection
 async function handleFileSelect(event) {
     const file = event.target.files[0];
     if (file) {
         selectedFile = await file.arrayBuffer();
-        log(`\x1b[36mLoaded archive: ${file.name} (${selectedFile.byteLength} bytes)\x1b[0m`);
+        log(`Loaded: ${file.name} (${selectedFile.byteLength} bytes)`);
         document.getElementById('slot').disabled = false;
         document.getElementById('flash').disabled = false;
     }
 }
 
-// Handle flash operation
 async function handleFlash() {
     if (!selectedFile || tiliquaHwVersion === null) {
-        log('\x1b[31mError: No file selected or device not connected\x1b[0m');
+        log('\x1b[31mNo file or device\x1b[0m');
         return;
     }
 
@@ -275,18 +224,12 @@ async function handleFlash() {
     const slot = slotValue === 'null' ? null : parseInt(slotValue);
 
     log('');
-    log('\x1b[1m=== Starting Flash Operation ===\x1b[0m');
-    log(`Slot: ${slot === null ? 'Bootloader' : slot}`);
-    log(`Hardware: R${tiliquaHwVersion}`);
+    log(`\x1b[1mFlashing to ${slot === null ? 'Bootloader' : 'Slot ' + slot}\x1b[0m`);
 
     try {
-        // Disable controls during flashing
         document.getElementById('flash').disabled = true;
         document.getElementById('slot').disabled = true;
         document.getElementById('archive').disabled = true;
-
-        // Call Python to process archive
-        log('\x1b[36mProcessing archive...\x1b[0m');
 
         pyodide.globals.set('archive_bytes', new Uint8Array(selectedFile));
         pyodide.globals.set('slot_value', slot);
@@ -365,29 +308,8 @@ json.dumps(result)
 
         const processedData = JSON.parse(result);
 
-        log(`\x1b[32mArchive processed successfully\x1b[0m`);
-        log(`Manifest: ${processedData.manifest.name}`);
-        log(`Type: ${processedData.is_bootloader ? 'Bootloader (XiP)' : 'User bitstream'}`);
+        log(`${processedData.manifest.name}`);
         log('');
-
-        // Show operations
-        log('\x1b[1mOperations to execute:\x1b[0m');
-        for (const op of processedData.operations) {
-            const args = [
-                '-c', 'dirtyJtag',
-                '-f',
-                '-o', `0x${op.offset.toString(16)}`,
-                '--file-type', op.file_type
-            ];
-            if (op.skip_reset) {
-                args.push('--skip-reset');
-            }
-            log(`  \$ openFPGALoader ${args.join(' ')} ${op.filename}`);
-        }
-        log('');
-
-        // Execute operations
-        log('\x1b[1mExecuting flash commands...\x1b[0m');
         for (const op of processedData.operations) {
             const data = new Uint8Array(op.data);
 
@@ -430,24 +352,21 @@ json.dumps(result)
         }
 
         log('');
-        log('\x1b[32m\x1b[1mFlashing completed successfully!\x1b[0m');
+        log('\x1b[32mDone\x1b[0m');
 
     } catch (error) {
         log('');
-        log(`\x1b[31m\x1b[1mFlash failed: ${error.message}\x1b[0m`);
+        log(`\x1b[31m${error.message}\x1b[0m`);
     } finally {
-        // Re-enable controls
         document.getElementById('flash').disabled = false;
         document.getElementById('slot').disabled = false;
         document.getElementById('archive').disabled = false;
     }
 }
 
-// Setup event listeners
 document.addEventListener('DOMContentLoaded', () => {
     initTerminal();
     initPyodide();
-
     document.getElementById('connect').addEventListener('click', scanForTiliqua);
     document.getElementById('archive').addEventListener('change', handleFileSelect);
     document.getElementById('flash').addEventListener('click', handleFlash);
