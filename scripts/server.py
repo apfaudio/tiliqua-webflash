@@ -13,9 +13,24 @@ def build_application():
         shutil.rmtree(build_dir)
     build_dir.mkdir()
 
+    # Create subdirectories for Python modules
+    (build_dir / "tiliqua" / "flash").mkdir(parents=True)
+    (build_dir / "tiliqua" / "build").mkdir(parents=True)
+    (build_dir / "rs" / "manifest" / "src").mkdir(parents=True)
+
     files_to_copy = [
         ("src/index.html", "index.html"),
         ("src/coi-serviceworker.js", "coi-serviceworker.js"),
+        # Python flash module
+        ("tiliqua/gateware/src/tiliqua/flash/__init__.py", "tiliqua/flash/__init__.py"),
+        ("tiliqua/gateware/src/tiliqua/flash/archive_loader.py", "tiliqua/flash/archive_loader.py"),
+        ("tiliqua/gateware/src/tiliqua/flash/spiflash_layout.py", "tiliqua/flash/spiflash_layout.py"),
+        ("tiliqua/gateware/src/tiliqua/flash/openfpgaloader.py", "tiliqua/flash/openfpgaloader.py"),
+        # Python build types module (skip __init__.py, we'll create empty one)
+        ("tiliqua/gateware/src/tiliqua/build/types.py", "tiliqua/build/types.py"),
+        # Rust manifest Python bindings
+        ("tiliqua/gateware/src/rs/manifest/src/lib.py", "rs/manifest/src/lib.py"),
+        ("tiliqua/gateware/src/rs/manifest/src/lib.rs", "rs/manifest/src/lib.rs"),
     ]
 
     for src_path, dest_name in files_to_copy:
@@ -27,6 +42,12 @@ def build_application():
 
         shutil.copy2(src, dest)
         print(f"Copied {src_path} -> build/{dest_name}")
+
+    # Create __init__.py files for module structure
+    (build_dir / "tiliqua" / "__init__.py").touch()
+    (build_dir / "rs" / "__init__.py").touch()
+    (build_dir / "rs" / "manifest" / "__init__.py").touch()
+    (build_dir / "rs" / "manifest" / "src" / "__init__.py").touch()
 
     print(f"Build completed successfully in {build_dir}")
 
