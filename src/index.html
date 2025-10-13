@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Tiliqua Flash Tool</title>
+    <title>Tiliqua Flasher</title>
     <meta charset="UTF-8">
     <script src="coi-serviceworker.js"></script>
     <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
@@ -393,7 +393,7 @@ async function handleFlash() {
     const slot = slotValue === 'null' ? null : parseInt(slotValue);
 
     log('');
-    log(`\x1b[1mFlashing to ${slot === null ? 'Bootloader' : 'Slot ' + slot}\x1b[0m`);
+    log(`\x1b[1mFlash to ${slot === null ? 'Bootloader' : 'Slot ' + slot}: \x1b[0m`);
 
     try {
         document.getElementById('flash').disabled = true;
@@ -403,6 +403,10 @@ async function handleFlash() {
         pyodide.globals.set('archive_bytes', new Uint8Array(selectedFile));
         pyodide.globals.set('slot_value', slot);
         pyodide.globals.set('hw_rev_value', tiliquaHwVersion);
+
+        // Redirect Python stdout/stderr to xterm
+        pyodide.setStdout({ batched: (msg) => term.writeln(msg) });
+        pyodide.setStderr({ batched: (msg) => term.writeln('\x1b[31m' + msg + '\x1b[0m') });
 
         const result = await pyodide.runPythonAsync(`
 import io
@@ -459,9 +463,11 @@ concrete_manifest, regions_to_flash = compute_concrete_regions_to_flash(manifest
 # Update manifest in files
 files['manifest.json'] = json.dumps(concrete_manifest.to_dict()).encode('utf-8')
 
-# Generate operations
 operations = []
 for i, region in enumerate(sorted(regions_to_flash)):
+
+    print('-', region)
+
     if region.memory_region.region_type == RegionType.OptionStorage:
         continue  # Skip option storage
 
@@ -490,8 +496,8 @@ json.dumps(result)
 
         const processedData = JSON.parse(result);
 
-        log(`${processedData.manifest.name}`);
         log('');
+
         for (const op of processedData.operations) {
             const data = new Uint8Array(op.data);
 
@@ -534,8 +540,7 @@ json.dumps(result)
         }
 
         log('');
-        log('\x1b[32mDone\x1b[0m');
-
+        log('\x1b[32m' + processedData.manifest.name + ' flashed successfully.\x1b[0m');
     } catch (error) {
         log('');
         log(`\x1b[31m${error.message}\x1b[0m`);
