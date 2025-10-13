@@ -414,6 +414,7 @@ import tarfile
 import json
 from tiliqua.build.types import BitstreamManifest, RegionType
 from tiliqua.flash.spiflash_layout import compute_concrete_regions_to_flash
+from tiliqua.flash.openfpgaloader import OpenFPGALoaderCommandSequence
 
 # Extract archive
 archive_buffer = io.BytesIO(bytes(archive_bytes))
@@ -460,29 +461,33 @@ elif not is_bootloader and slot_value is None:
 # Compute concrete regions
 concrete_manifest, regions_to_flash = compute_concrete_regions_to_flash(manifest, slot_value)
 
+print('Desired layout:')
+for region in sorted(regions_to_flash):
+    print('-', region)
+
 # Update manifest in files
 files['manifest.json'] = json.dumps(concrete_manifest.to_dict()).encode('utf-8')
 
+# Generate commands using OpenFPGALoaderCommandSequence
+cmd_sequence = OpenFPGALoaderCommandSequence.from_flashable_regions(sorted(regions_to_flash))
+
 operations = []
-for i, region in enumerate(sorted(regions_to_flash)):
+for cmd in cmd_sequence.commands:
+    # Strip 'openFPGALoader' (first element) to get args
+    args = cmd[1:]
 
-    print('-', region)
+    # Filename is the last argument
+    filename = args[-1]
 
-    if region.memory_region.region_type == RegionType.OptionStorage:
-        continue  # Skip option storage
-
-    filename = region.memory_region.filename
     if filename not in files:
         raise ValueError(f"File {filename} referenced in manifest but not found in archive")
 
     data = files[filename]
 
     operations.append({
+        'args': args,
         'filename': filename,
         'data': list(data),  # Convert bytes to list for JSON
-        'offset': region.addr,
-        'file_type': 'raw',
-        'skip_reset': i < len(regions_to_flash) - 1
     })
 
 result = {
@@ -501,18 +506,9 @@ json.dumps(result)
         for (const op of processedData.operations) {
             const data = new Uint8Array(op.data);
 
-            const args = [
-                '-c', 'dirtyJtag',
-                '-f',
-                '-o', `0x${op.offset.toString(16)}`,
-                '--file-type', op.file_type
-            ];
-
-            if (op.skip_reset) {
-                args.push('--skip-reset');
-            }
-
-            args.push('data');
+            // Replace the filename in args with 'data' (the key in filesIn)
+            const args = [...op.args];
+            args[args.length - 1] = 'data';
 
             log(`\x1b[34m$ openFPGALoader ${args.join(' ')}\x1b[0m`);
 
@@ -540,7 +536,7 @@ json.dumps(result)
         }
 
         log('');
-        log('\x1b[32m' + processedData.manifest.name + ' flashed successfully.\x1b[0m');
+        log('\x1b[32m' + processedData.manifest.name + ' flashed to slot ' + slot + '\x1b[0m');
     } catch (error) {
         log('');
         log(`\x1b[31m${error.message}\x1b[0m`);
