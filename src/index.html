@@ -100,7 +100,7 @@
     </style>
 </head>
 <body>
-    <h1>Tiliqua Flash Tool</h1>
+    <h1>Tiliqua Flasher</h1>
 
     <div class="controls">
         <button id="connect">Connect to Tiliqua</button>
@@ -127,6 +127,7 @@
             <option value="7">Slot 7</option>
         </select>
         <button id="flash" disabled>Flash</button>
+        <button id="update-all" disabled>Update All Slots</button>
     </div>
 
     <div id="terminal"></div>
@@ -134,6 +135,18 @@
     <script type="module">
 import { runOpenFPGALoader, Exit } from 'https://cdn.jsdelivr.net/npm/@yowasp/openfpgaloader/gen/bundle.js';
 import { AVAILABLE_BITSTREAMS } from './bitstreams.js';
+
+// Update configuration: maps slot numbers to bitstream names
+// Modify this to change which bitstreams are flashed to which slots
+const UPDATE_MAPPING = [
+    { slot: null, bitstreamName: 'bootloader-361a69-r5.tar.gz' },
+    { slot: 0, bitstreamName: 'xbeam-361a69-r5.tar.gz' },
+    { slot: 1, bitstreamName: 'polysyn-361a69-r5.tar.gz' },
+    { slot: 2, bitstreamName: 'macro-osc-361a69-r5.tar.gz' },
+    { slot: 3, bitstreamName: 'sid-361a69-r5.tar.gz' },
+    { slot: 4, bitstreamName: 'selftest-361a69-r5.tar.gz' },
+    // Add more mappings as needed
+];
 
 // Global state
 let pyodide = null;
@@ -270,6 +283,9 @@ async function scanForTiliqua() {
         document.getElementById('archive').disabled = false;
         document.getElementById('archive-label').classList.remove('disabled');
 
+        // Enable update all button
+        document.getElementById('update-all').disabled = false;
+
         return tiliquaHwVersion;
 
     } catch (error) {
@@ -383,30 +399,15 @@ async function handleServerBitstreamSelect(event) {
     }
 }
 
-async function handleFlash() {
-    if (!selectedFile || tiliquaHwVersion === null) {
-        log('\x1b[31mNo file or device\x1b[0m');
-        return;
-    }
+// Core flash logic - reusable for both single flash and batch update
+async function doFlash(bitstreamData, slot) {
+    pyodide.globals.set('archive_bytes', new Uint8Array(bitstreamData));
+    pyodide.globals.set('slot_value', slot);
+    pyodide.globals.set('hw_rev_value', tiliquaHwVersion);
 
-    const slotValue = document.getElementById('slot').value;
-    const slot = slotValue === 'null' ? null : parseInt(slotValue);
-
-    log('');
-    log(`\x1b[1mFlash to ${slot === null ? 'Bootloader' : 'Slot ' + slot}: \x1b[0m`);
-
-    try {
-        document.getElementById('flash').disabled = true;
-        document.getElementById('slot').disabled = true;
-        document.getElementById('archive').disabled = true;
-
-        pyodide.globals.set('archive_bytes', new Uint8Array(selectedFile));
-        pyodide.globals.set('slot_value', slot);
-        pyodide.globals.set('hw_rev_value', tiliquaHwVersion);
-
-        // Redirect Python stdout/stderr to xterm
-        pyodide.setStdout({ batched: (msg) => term.writeln(msg) });
-        pyodide.setStderr({ batched: (msg) => term.writeln('\x1b[31m' + msg + '\x1b[0m') });
+    // Redirect Python stdout/stderr to xterm
+    pyodide.setStdout({ batched: (msg) => term.writeln(msg) });
+    pyodide.setStderr({ batched: (msg) => term.writeln('\x1b[31m' + msg + '\x1b[0m') });
 
         const result = await pyodide.runPythonAsync(`
 import io
@@ -537,6 +538,26 @@ json.dumps(result)
 
         log('');
         log('\x1b[32m' + processedData.manifest.name + ' flashed to slot ' + slot + '\x1b[0m');
+}
+
+async function handleFlash() {
+    if (!selectedFile || tiliquaHwVersion === null) {
+        log('\x1b[31mNo file or device\x1b[0m');
+        return;
+    }
+
+    const slotValue = document.getElementById('slot').value;
+    const slot = slotValue === 'null' ? null : parseInt(slotValue);
+
+    log('');
+    log(`\x1b[1mFlash to ${slot === null ? 'Bootloader' : 'Slot ' + slot}: \x1b[0m`);
+
+    try {
+        document.getElementById('flash').disabled = true;
+        document.getElementById('slot').disabled = true;
+        document.getElementById('archive').disabled = true;
+
+        await doFlash(selectedFile, slot);
     } catch (error) {
         log('');
         log(`\x1b[31m${error.message}\x1b[0m`);
@@ -544,6 +565,88 @@ json.dumps(result)
         document.getElementById('flash').disabled = false;
         document.getElementById('slot').disabled = false;
         document.getElementById('archive').disabled = false;
+    }
+}
+
+async function handleUpdateAll() {
+    if (tiliquaHwVersion === null) {
+        log('\x1b[31mNo device connected\x1b[0m');
+        return;
+    }
+
+    // Show confirmation dialog
+    const slotList = UPDATE_MAPPING.map(m => `  Slot ${m.slot}: ${m.bitstreamName}`).join('\n');
+    const confirmed = confirm(
+        `This will reflash all Tiliqua slots with the latest versions.\n\n` +
+        `The following slots will be updated:\n${slotList}\n\nContinue?`
+    );
+
+    if (!confirmed) {
+        log('Update cancelled by user');
+        return;
+    }
+
+    log('');
+    log('\x1b[1mStarting update sequence...\x1b[0m');
+
+    // Disable all controls
+    const flashButton = document.getElementById('flash');
+    const updateButton = document.getElementById('update-all');
+    const slotSelect = document.getElementById('slot');
+    const archiveInput = document.getElementById('archive');
+    const bitstreamSourceSelect = document.getElementById('bitstream-source');
+
+    flashButton.disabled = true;
+    updateButton.disabled = true;
+    slotSelect.disabled = true;
+    archiveInput.disabled = true;
+    bitstreamSourceSelect.disabled = true;
+
+    try {
+        for (let i = 0; i < UPDATE_MAPPING.length; i++) {
+            const mapping = UPDATE_MAPPING[i];
+            const slot = mapping.slot;
+            const bitstreamName = mapping.bitstreamName;
+
+            log('');
+            log(`\x1b[1m[${i + 1}/${UPDATE_MAPPING.length}] Updating slot ${slot} with ${bitstreamName}\x1b[0m`);
+
+            // Find the bitstream URL from AVAILABLE_BITSTREAMS
+            const bitstream = AVAILABLE_BITSTREAMS.find(b =>
+                b.url.endsWith(bitstreamName) || b.name === bitstreamName
+            );
+
+            if (!bitstream) {
+                throw new Error(`Bitstream "${bitstreamName}" not found in available bitstreams`);
+            }
+
+            // Fetch the bitstream
+            log(`Loading ${bitstream.url}...`);
+            const response = await fetch(bitstream.url);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const bitstreamData = await response.arrayBuffer();
+            log(`Loaded ${bitstreamName} (${bitstreamData.byteLength} bytes)`);
+
+            // Flash using the core flash logic
+            await doFlash(bitstreamData, slot);
+        }
+
+        log('');
+        log('\x1b[32m\x1b[1mUpdate complete! All slots updated successfully.\x1b[0m');
+
+    } catch (error) {
+        log('');
+        log(`\x1b[31m\x1b[1mUpdate failed: ${error.message}\x1b[0m`);
+    } finally {
+        // Re-enable controls
+        flashButton.disabled = false;
+        updateButton.disabled = false;
+        slotSelect.disabled = false;
+        archiveInput.disabled = false;
+        bitstreamSourceSelect.disabled = false;
     }
 }
 
@@ -555,6 +658,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('archive').addEventListener('change', handleFileSelect);
     document.getElementById('server-bitstreams').addEventListener('change', handleServerBitstreamSelect);
     document.getElementById('flash').addEventListener('click', handleFlash);
+    document.getElementById('update-all').addEventListener('click', handleUpdateAll);
 });
     </script>
 </body>
