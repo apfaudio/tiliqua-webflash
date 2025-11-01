@@ -105,6 +105,46 @@
         #terminal .xterm-viewport::-webkit-scrollbar-thumb:hover {
             background: #6cf;
         }
+        #help {
+            margin-top: 30px;
+            padding: 20px;
+            border: 1px solid #4af;
+            background: #000;
+        }
+        #help h2 {
+            color: #4af;
+            font-size: 16px;
+            font-weight: normal;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        #help ol, #help ul {
+            margin-left: 20px;
+            margin-bottom: 10px;
+        }
+        #help li {
+            margin-bottom: 8px;
+            line-height: 1.8;
+        }
+        #help ul {
+            margin-top: 8px;
+        }
+        #help strong {
+            color: #6cf;
+        }
+        #help .note {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #333;
+            color: #4af;
+        }
+        #help code {
+            background: #111;
+            padding: 2px 6px;
+            border: 1px solid #333;
+            color: #6cf;
+        }
     </style>
 </head>
 <body>
@@ -139,6 +179,24 @@
     </div>
 
     <div id="terminal"></div>
+
+    <div id="help">
+        <h2>How to Use</h2>
+        <ol>
+            <li><strong>Wait for 'Ready' to be shown:</strong> it takes a few seconds for the dependencies to be downloaded.</li>
+            <li><strong>Connect Tiliqua:</strong> 'dbg' (top) USB port to your computer.</li>
+            <li><strong>Select your device:</strong> Click "Connect to Tiliqua" button above and select your device.</li>
+            <li><strong>Pick what you want to do:</strong>
+                <ul>
+                    <li><strong>Upload File:</strong> Select a bitstream archive from your computer and flash to a specific slot.</li>
+                    <li><strong>Select from Server:</strong> Select a bitstream archive from the latest Tiliqua gateware release (will be downloaded from the server).</li>
+                    <li><strong>Factory Reflash:</strong> Wipe and reflash all slots with default bitstreams in their default positions from the latest Tiliqua gateware release.</li>
+                </ul>
+            </li>
+        </ol>
+        <p class="note"><strong>Browser Compatibility:</strong> This tool requires WebUSB support, which is only available in Chromium-based browsers (Chrome, Edge, Brave, etc.). Firefox and Safari are not supported.</p>
+        <p class="note"><strong>USB Permissions:</strong> Tiliqua must be accessible without <code>sudo</code>. This should work out-of-the-box on macOS and Windows. On Linux, you may need to add a udev rule for USB device permissions.</p>
+    </div>
 
     <script type="module">
 import { runOpenFPGALoader, Exit } from 'https://cdn.jsdelivr.net/npm/@yowasp/openfpgaloader/gen/bundle.js';
