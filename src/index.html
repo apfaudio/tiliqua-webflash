@@ -50,6 +50,14 @@
             opacity: 0.3;
             cursor: not-allowed;
         }
+        button.danger {
+            border-color: #f44;
+            color: #f44;
+        }
+        button.danger:hover:not(:disabled) {
+            background: #f44;
+            color: #000;
+        }
         input[type="file"] {
             position: absolute;
             opacity: 0;
@@ -127,26 +135,14 @@
             <option value="7">Slot 7</option>
         </select>
         <button id="flash" disabled>Flash</button>
-        <button id="update-all" disabled>Update All Slots</button>
+        <button id="factory-reflash" class="danger" disabled>Factory Reflash</button>
     </div>
 
     <div id="terminal"></div>
 
     <script type="module">
 import { runOpenFPGALoader, Exit } from 'https://cdn.jsdelivr.net/npm/@yowasp/openfpgaloader/gen/bundle.js';
-import { AVAILABLE_BITSTREAMS } from './bitstreams.js';
-
-// Update configuration: maps slot numbers to bitstream names
-// Modify this to change which bitstreams are flashed to which slots
-const UPDATE_MAPPING = [
-    { slot: null, bitstreamName: 'bootloader-361a69-r5.tar.gz' },
-    { slot: 0, bitstreamName: 'xbeam-361a69-r5.tar.gz' },
-    { slot: 1, bitstreamName: 'polysyn-361a69-r5.tar.gz' },
-    { slot: 2, bitstreamName: 'macro-osc-361a69-r5.tar.gz' },
-    { slot: 3, bitstreamName: 'sid-361a69-r5.tar.gz' },
-    { slot: 4, bitstreamName: 'selftest-361a69-r5.tar.gz' },
-    // Add more mappings as needed
-];
+import { AVAILABLE_BITSTREAMS, FACTORY_MAPPINGS } from './bitstreams.js';
 
 // Global state
 let pyodide = null;
@@ -283,8 +279,8 @@ async function scanForTiliqua() {
         document.getElementById('archive').disabled = false;
         document.getElementById('archive-label').classList.remove('disabled');
 
-        // Enable update all button
-        document.getElementById('update-all').disabled = false;
+        // Enable factory reflash button
+        document.getElementById('factory-reflash').disabled = false;
 
         return tiliquaHwVersion;
 
@@ -345,7 +341,12 @@ function populateServerBitstreams() {
     const serverSelect = document.getElementById('server-bitstreams');
     serverSelect.innerHTML = '<option value="">Select a bitstream...</option>';
 
-    for (const bitstream of AVAILABLE_BITSTREAMS) {
+    // Filter bitstreams by hardware version
+    const filteredBitstreams = AVAILABLE_BITSTREAMS.filter(bitstream =>
+        bitstream.hw_rev === tiliquaHwVersion
+    );
+
+    for (const bitstream of filteredBitstreams) {
         const option = document.createElement('option');
         option.value = bitstream.url;
         const sizeKB = (bitstream.size / 1024).toFixed(1);
@@ -353,8 +354,9 @@ function populateServerBitstreams() {
         serverSelect.appendChild(option);
     }
 
-    if (AVAILABLE_BITSTREAMS.length === 0) {
-        serverSelect.innerHTML = '<option value="">No bitstreams available</option>';
+    if (filteredBitstreams.length === 0) {
+        const hwInfo = tiliquaHwVersion ? ` for R${tiliquaHwVersion}` : '';
+        serverSelect.innerHTML = `<option value="">No bitstreams available${hwInfo}</option>`;
     }
 }
 
@@ -568,48 +570,55 @@ async function handleFlash() {
     }
 }
 
-async function handleUpdateAll() {
+async function handleFactoryReflash() {
     if (tiliquaHwVersion === null) {
         log('\x1b[31mNo device connected\x1b[0m');
         return;
     }
 
+    // Get factory mapping for this hardware version
+    const factoryMapping = FACTORY_MAPPINGS[tiliquaHwVersion];
+    if (!factoryMapping || factoryMapping.length === 0) {
+        log(`\x1b[31mNo factory mapping available for R${tiliquaHwVersion}\x1b[0m`);
+        return;
+    }
+
     // Show confirmation dialog
-    const slotList = UPDATE_MAPPING.map(m => `  Slot ${m.slot}: ${m.bitstreamName}`).join('\n');
+    const slotList = factoryMapping.map(m => `  Slot ${m.slot === null ? 'Bootloader' : m.slot}: ${m.bitstreamName}`).join('\n');
     const confirmed = confirm(
-        `This will reflash all Tiliqua slots with the latest versions.\n\n` +
-        `The following slots will be updated:\n${slotList}\n\nContinue?`
+        `FACTORY REFLASH - This will erase and reflash all Tiliqua R${tiliquaHwVersion} slots.\n\n` +
+        `The following slots will be reflashed:\n${slotList}\n\nContinue?`
     );
 
     if (!confirmed) {
-        log('Update cancelled by user');
+        log('Factory reflash cancelled by user');
         return;
     }
 
     log('');
-    log('\x1b[1mStarting update sequence...\x1b[0m');
+    log('\x1b[1mStarting factory reflash sequence...\x1b[0m');
 
     // Disable all controls
     const flashButton = document.getElementById('flash');
-    const updateButton = document.getElementById('update-all');
+    const factoryReflashButton = document.getElementById('factory-reflash');
     const slotSelect = document.getElementById('slot');
     const archiveInput = document.getElementById('archive');
     const bitstreamSourceSelect = document.getElementById('bitstream-source');
 
     flashButton.disabled = true;
-    updateButton.disabled = true;
+    factoryReflashButton.disabled = true;
     slotSelect.disabled = true;
     archiveInput.disabled = true;
     bitstreamSourceSelect.disabled = true;
 
     try {
-        for (let i = 0; i < UPDATE_MAPPING.length; i++) {
-            const mapping = UPDATE_MAPPING[i];
+        for (let i = 0; i < factoryMapping.length; i++) {
+            const mapping = factoryMapping[i];
             const slot = mapping.slot;
             const bitstreamName = mapping.bitstreamName;
 
             log('');
-            log(`\x1b[1m[${i + 1}/${UPDATE_MAPPING.length}] Updating slot ${slot} with ${bitstreamName}\x1b[0m`);
+            log(`\x1b[1m[${i + 1}/${factoryMapping.length}] Reflashing slot ${slot === null ? 'Bootloader' : slot} with ${bitstreamName}\x1b[0m`);
 
             // Find the bitstream URL from AVAILABLE_BITSTREAMS
             const bitstream = AVAILABLE_BITSTREAMS.find(b =>
@@ -635,15 +644,15 @@ async function handleUpdateAll() {
         }
 
         log('');
-        log('\x1b[32m\x1b[1mUpdate complete! All slots updated successfully.\x1b[0m');
+        log('\x1b[32m\x1b[1mFactory reflash complete! All slots reflashed successfully.\x1b[0m');
 
     } catch (error) {
         log('');
-        log(`\x1b[31m\x1b[1mUpdate failed: ${error.message}\x1b[0m`);
+        log(`\x1b[31m\x1b[1mFactory reflash failed: ${error.message}\x1b[0m`);
     } finally {
         // Re-enable controls
         flashButton.disabled = false;
-        updateButton.disabled = false;
+        factoryReflashButton.disabled = false;
         slotSelect.disabled = false;
         archiveInput.disabled = false;
         bitstreamSourceSelect.disabled = false;
@@ -658,7 +667,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('archive').addEventListener('change', handleFileSelect);
     document.getElementById('server-bitstreams').addEventListener('change', handleServerBitstreamSelect);
     document.getElementById('flash').addEventListener('click', handleFlash);
-    document.getElementById('update-all').addEventListener('click', handleUpdateAll);
+    document.getElementById('factory-reflash').addEventListener('click', handleFactoryReflash);
 });
     </script>
 </body>
