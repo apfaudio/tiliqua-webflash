@@ -230,6 +230,19 @@ function log(message, style = '') {
 
 // Initialize Pyodide
 async function initPyodide() {
+    // Check if cross-origin isolated (required for SharedArrayBuffer)
+    if (!crossOriginIsolated) {
+        log('\x1b[33mWaiting for cross-origin isolation...\x1b[0m');
+        log('\x1b[33m(Page should reload automatically)\x1b[0m');
+        // Wait a moment for service worker to trigger reload
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        if (!crossOriginIsolated) {
+            log('\x1b[31mError: SharedArrayBuffer not available\x1b[0m');
+            log('\x1b[31mTry manually refreshing the page\x1b[0m');
+            return;
+        }
+    }
+
     log('Loading Pyodide...');
     pyodide = await loadPyodide();
 
