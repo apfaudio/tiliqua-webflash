@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tiliqua Flasher</title>
+    <meta charset="UTF-8">
+    <script src="coi-serviceworker.js"></script>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background: #000;
+            color: #4af;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #4af;
+            font-size: 18px;
+            font-weight: normal;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .controls {
+            margin-bottom: 15px;
+        }
+        button, select {
+            font-family: 'JetBrains Mono', monospace;
+            background: #000;
+            color: #4af;
+            border: 1px solid #4af;
+            padding: 6px 12px;
+            margin-right: 8px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        button:hover:not(:disabled), select:hover:not(:disabled) {
+            background: #4af;
+            color: #000;
+        }
+        button:disabled, select:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        button.danger {
+            border-color: #f44;
+            color: #f44;
+        }
+        button.danger:hover:not(:disabled) {
+            background: #f44;
+            color: #000;
+        }
+        input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        label[for="archive"] {
+            font-family: 'JetBrains Mono', monospace;
+            background: #000;
+            color: #4af;
+            border: 1px solid #4af;
+            padding: 6px 12px;
+            margin-right: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            display: inline-block;
+        }
+        label[for="archive"]:hover {
+            background: #4af;
+            color: #000;
+        }
+        label[for="archive"].disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        #status {
+            color: #4af;
+            font-size: 13px;
+        }
+        #terminal {
+            margin-top: 20px;
+            border: 1px solid #4af;
+            padding: 10px;
+        }
+        #terminal .xterm-viewport::-webkit-scrollbar {
+            width: 10px;
+        }
+        #terminal .xterm-viewport::-webkit-scrollbar-track {
+            background: #000;
+        }
+        #terminal .xterm-viewport::-webkit-scrollbar-thumb {
+            background: #4af;
+            border: 1px solid #000;
+        }
+        #terminal .xterm-viewport::-webkit-scrollbar-thumb:hover {
+            background: #6cf;
+        }
+        #help {
+            margin-top: 30px;
+            padding: 20px;
+            border: 1px solid #4af;
+            background: #000;
+        }
+        #help h2 {
+            color: #4af;
+            font-size: 16px;
+            font-weight: normal;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        #help ol, #help ul {
+            margin-left: 20px;
+            margin-bottom: 10px;
+        }
+        #help li {
+            margin-bottom: 8px;
+            line-height: 1.8;
+        }
+        #help ul {
+            margin-top: 8px;
+        }
+        #help strong {
+            color: #6cf;
+        }
+        #help .note {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #333;
+            color: #4af;
+        }
+        #help code {
+            background: #111;
+            padding: 2px 6px;
+            border: 1px solid #333;
+            color: #6cf;
+        }
+    </style>
+</head>
+<body>
+    <h1>Tiliqua Flasher</h1>
+
+    <div class="controls">
+        <button id="connect">Connect to Tiliqua</button>
+        <span id="status">Not connected</span>
+    </div>
+
+    <div class="controls">
+        <select id="bitstream-source" disabled>
+            <option value="file">Upload File</option>
+            <option value="server">Select from Server</option>
+        </select>
+        <label for="archive" class="disabled" id="archive-label">Choose File</label>
+        <input type="file" id="archive" accept=".tar.gz" disabled>
+        <select id="server-bitstreams" class="disabled" disabled style="display:none;"></select>
+        <select id="slot" disabled>
+            <option value="null">Bootloader</option>
+            <option value="0" selected>Slot 0</option>
+            <option value="1">Slot 1</option>
+            <option value="2">Slot 2</option>
+            <option value="3">Slot 3</option>
+            <option value="4">Slot 4</option>
+            <option value="5">Slot 5</option>
+            <option value="6">Slot 6</option>
+            <option value="7">Slot 7</option>
+        </select>
+        <button id="flash" disabled>Flash</button>
+        <button id="factory-reflash" class="danger" disabled>Factory Reflash</button>
+    </div>
+
+    <div id="terminal"></div>
+
+    <div id="help">
+        <h2>How to Use</h2>
+        <ol>
+            <li><strong>Wait for 'Ready' to be shown:</strong> it takes a few seconds for the dependencies to be downloaded.</li>
+            <li><strong>Connect Tiliqua:</strong> 'dbg' (top) USB port to your computer.</li>
+            <li><strong>Select your device:</strong> Click "Connect to Tiliqua" button above and select your device.</li>
+            <li><strong>Pick what you want to do:</strong>
+                <ul>
+                    <li><strong>Upload File:</strong> Select a bitstream archive from your computer and flash to a specific slot.</li>
+                    <li><strong>Select from Server:</strong> Select a bitstream archive from the latest Tiliqua gateware release (will be downloaded from the server).</li>
+                    <li><strong>Factory Reflash:</strong> Wipe and reflash all slots with default bitstreams in their default positions from the latest Tiliqua gateware release.</li>
+                </ul>
+            </li>
+        </ol>
+        <p class="note"><strong>Browser Compatibility:</strong> This tool requires WebUSB support, which is only available in Chromium-based browsers (Chrome, Edge, Brave, etc.). Firefox and Safari are not supported.</p>
+        <p class="note"><strong>USB Permissions:</strong> Tiliqua must be accessible without <code>sudo</code>. This should work out-of-the-box on macOS and Windows. On Linux, you may need to add a udev rule for USB device permissions.</p>
+    </div>
+
+    <script type="module">
+import { runOpenFPGALoader, Exit } from 'https://cdn.jsdelivr.net/npm/@yowasp/openfpgaloader/gen/bundle.js';
+import { AVAILABLE_BITSTREAMS, FACTORY_MAPPINGS } from './bitstreams.js';
+
+// Global state
+let pyodide = null;
+let tiliquaHwVersion = null;
+let selectedFile = null;
+let term = null;
+
+function initTerminal() {
+    term = new Terminal({
+        theme: {
+            background: '#000',
+            foreground: '#fff'
+        },
+        fontFamily: '"JetBrains Mono", monospace',
+        fontSize: 14,
+        convertEol: true
+    });
+    term.open(document.getElementById('terminal'));
+    term.writeln('Terminal initialized. Waiting for Pyodide...');
+}
+
+function log(message, style = '') {
+    if (term) {
+        term.writeln(style + message + '\x1b[0m');
+    }
+}
+
+// Initialize Pyodide
+async function initPyodide() {
+    // Check if cross-origin isolated (required for SharedArrayBuffer)
+    if (!crossOriginIsolated) {
+        log('\x1b[33mWaiting for cross-origin isolation...\x1b[0m');
+        log('\x1b[33m(Page should reload automatically)\x1b[0m');
+        // Wait a moment for service worker to trigger reload
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        if (!crossOriginIsolated) {
+            log('\x1b[31mError: SharedArrayBuffer not available\x1b[0m');
+            log('\x1b[31mTry manually refreshing the page\x1b[0m');
+            return;
+        }
+    }
+
+    log('Loading Pyodide...');
+    pyodide = await loadPyodide();
+
+    await pyodide.loadPackage('micropip');
+    const micropip = pyodide.pyimport('micropip');
+    await micropip.install(['dataclasses-json', 'colorama']);
+
+    const emptyInitFiles = [
+        'tiliqua/__init__.py',
+        'tiliqua/build/__init__.py',
+        'tiliqua/flash/__init__.py',
+        'rs/__init__.py',
+        'rs/manifest/__init__.py',
+        'rs/manifest/src/__init__.py',
+    ];
+
+    for (const file of emptyInitFiles) {
+        const dir = file.substring(0, file.lastIndexOf('/'));
+        if (dir) {
+            const parts = dir.split('/');
+            let currentPath = '';
+            for (const part of parts) {
+                currentPath = currentPath ? `${currentPath}/${part}` : part;
+                try {
+                    pyodide.FS.mkdir(currentPath);
+                } catch (e) {}
+            }
+        }
+        pyodide.FS.writeFile(file, '');
+    }
+
+    const pythonFiles = [
+        'tiliqua/build/types.py',
+        'tiliqua/flash/archive_loader.py',
+        'tiliqua/flash/spiflash_layout.py',
+        'tiliqua/flash/openfpgaloader.py',
+        'rs/manifest/src/lib.py',
+        'rs/manifest/src/lib.rs',
+    ];
+
+    for (const file of pythonFiles) {
+        const response = await fetch(file);
+        if (!response.ok) {
+            throw new Error(`Failed to load ${file}: HTTP ${response.status}`);
+        }
+        const content = await response.text();
+        const dir = file.substring(0, file.lastIndexOf('/'));
+        if (dir) {
+            const parts = dir.split('/');
+            let currentPath = '';
+            for (const part of parts) {
+                currentPath = currentPath ? `${currentPath}/${part}` : part;
+                try {
+                    pyodide.FS.mkdir(currentPath);
+                } catch (e) {}
+            }
+        }
+        pyodide.FS.writeFile(file, content);
+    }
+
+    log('\x1b[32mReady\x1b[0m');
+    document.getElementById('connect').disabled = false;
+}
+
+async function scanForTiliqua() {
+    try {
+        const devices = await navigator.usb.getDevices();
+        let tiliquaDevice = null;
+
+        for (const device of devices) {
+            if (device.productName &&
+                (device.productName.toLowerCase().includes('apfbug') ||
+                 device.productName.toLowerCase().includes('apf.audio'))) {
+                tiliquaDevice = device;
+                break;
+            }
+        }
+
+        if (!tiliquaDevice) {
+            tiliquaDevice = await navigator.usb.requestDevice({ filters: [] });
+        }
+
+        const productName = tiliquaDevice.productName || "";
+        if (!productName.toLowerCase().includes('apfbug') &&
+            !productName.toLowerCase().includes('apf.audio')) {
+            throw new Error("Selected device is not a Tiliqua debugger");
+        }
+
+        const hwVersionMatch = productName.match(/R(\d+)/);
+        if (!hwVersionMatch) {
+            throw new Error("Product code is malformed (update RP2040?)");
+        }
+
+        tiliquaHwVersion = parseInt(hwVersionMatch[1]);
+        log(`\x1b[32mConnected: ${productName} (R${tiliquaHwVersion}, ${tiliquaDevice.serialNumber})\x1b[0m`);
+
+        const statusEl = document.getElementById('status');
+        statusEl.textContent = `Connected: ${productName}`;
+        statusEl.style.color = '#4CAF50';
+
+        // Enable bitstream source selection
+        document.getElementById('bitstream-source').disabled = false;
+
+        // Enable file upload by default
+        document.getElementById('archive').disabled = false;
+        document.getElementById('archive-label').classList.remove('disabled');
+
+        // Enable factory reflash button
+        document.getElementById('factory-reflash').disabled = false;
+
+        return tiliquaHwVersion;
+
+    } catch (error) {
+        let errorMsg = error.message || "Unknown error";
+        let additionalInfo = "Check device is on, plugged in ('dbg' port), permissions correct, RP2040 firmware up to date.";
+
+        if ((error.message && error.message.includes("navigator.usb is undefined")) ||
+            (!navigator.usb)) {
+            errorMsg = "WebUSB is not supported in this browser";
+            additionalInfo = "Use Chrome, Edge, or another Chromium-based browser.";
+        }
+
+        log(`\x1b[31m${errorMsg}\x1b[0m`);
+        log(`\x1b[31m${additionalInfo}\x1b[0m`)
+
+        const statusEl = document.getElementById('status');
+        statusEl.textContent = `Error: ${errorMsg}`;
+        statusEl.style.color = '#ff6b6b';
+        return null;
+    }
+}
+
+function handleBitstreamSourceChange() {
+    const sourceSelect = document.getElementById('bitstream-source');
+    const fileLabel = document.getElementById('archive-label');
+    const fileInput = document.getElementById('archive');
+    const serverSelect = document.getElementById('server-bitstreams');
+    const slotSelect = document.getElementById('slot');
+    const flashButton = document.getElementById('flash');
+
+    // Reset selection
+    selectedFile = null;
+    slotSelect.disabled = true;
+    flashButton.disabled = true;
+
+    if (sourceSelect.value === 'file') {
+        // Show file upload, hide server select
+        fileLabel.style.display = '';
+        fileInput.style.display = '';
+        fileLabel.classList.remove('disabled');
+        fileInput.disabled = false;
+        serverSelect.style.display = 'none';
+        serverSelect.disabled = true;
+        fileLabel.textContent = 'Choose File';
+    } else {
+        // Show server select, hide file upload
+        fileLabel.style.display = 'none';
+        fileInput.style.display = 'none';
+        serverSelect.style.display = '';
+        serverSelect.disabled = false;
+        serverSelect.classList.remove('disabled');
+        populateServerBitstreams();
+    }
+}
+
+function populateServerBitstreams() {
+    const serverSelect = document.getElementById('server-bitstreams');
+    serverSelect.innerHTML = '<option value="">Select a bitstream...</option>';
+
+    // Filter bitstreams by hardware version
+    const filteredBitstreams = AVAILABLE_BITSTREAMS.filter(bitstream =>
+        bitstream.hw_rev === tiliquaHwVersion
+    );
+
+    for (const bitstream of filteredBitstreams) {
+        const option = document.createElement('option');
+        option.value = bitstream.url;
+        const sizeKB = (bitstream.size / 1024).toFixed(1);
+        option.textContent = `${bitstream.name} (${sizeKB} KB)`;
+        serverSelect.appendChild(option);
+    }
+
+    if (filteredBitstreams.length === 0) {
+        const hwInfo = tiliquaHwVersion ? ` for R${tiliquaHwVersion}` : '';
+        serverSelect.innerHTML = `<option value="">No bitstreams available${hwInfo}</option>`;
+    }
+}
+
+async function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (file) {
+        selectedFile = await file.arrayBuffer();
+        log(`Loaded: ${file.name} (${selectedFile.byteLength} bytes)`);
+        document.getElementById('archive-label').textContent = file.name;
+        document.getElementById('slot').disabled = false;
+        document.getElementById('flash').disabled = false;
+    }
+}
+
+async function handleServerBitstreamSelect(event) {
+    const url = event.target.value;
+    if (!url) {
+        selectedFile = null;
+        document.getElementById('slot').disabled = true;
+        document.getElementById('flash').disabled = true;
+        return;
+    }
+
+    try {
+        log(`Loading bitstream from server: ${url}`);
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        selectedFile = await response.arrayBuffer();
+        const fileName = url.split('/').pop();
+        log(`Loaded: ${fileName} (${selectedFile.byteLength} bytes)`);
+
+        document.getElementById('slot').disabled = false;
+        document.getElementById('flash').disabled = false;
+    } catch (error) {
+        log(`\x1b[31mFailed to load bitstream: ${error.message}\x1b[0m`);
+        selectedFile = null;
+        document.getElementById('slot').disabled = true;
+        document.getElementById('flash').disabled = true;
+    }
+}
+
+// Core flash logic - reusable for both single flash and batch update
+async function doFlash(bitstreamData, slot) {
+    pyodide.globals.set('archive_bytes', new Uint8Array(bitstreamData));
+    pyodide.globals.set('slot_value', slot);
+    pyodide.globals.set('hw_rev_value', tiliquaHwVersion);
+
+    // Redirect Python stdout/stderr to xterm
+    pyodide.setStdout({ batched: (msg) => term.writeln(msg) });
+    pyodide.setStderr({ batched: (msg) => term.writeln('\x1b[31m' + msg + '\x1b[0m') });
+
+        const result = await pyodide.runPythonAsync(`
+import io
+import tarfile
+import json
+from tiliqua.build.types import BitstreamManifest, RegionType
+from tiliqua.flash.spiflash_layout import compute_concrete_regions_to_flash
+from tiliqua.flash.openfpgaloader import OpenFPGALoaderCommandSequence
+
+# Extract archive
+archive_buffer = io.BytesIO(bytes(archive_bytes))
+files = {}
+
+# Try to detect if it's gzipped or plain tar
+# Check for gzip magic bytes (0x1f 0x8b)
+archive_buffer.seek(0)
+first_two = archive_buffer.read(2)
+archive_buffer.seek(0)
+
+if first_two == b'\\x1f\\x8b':
+    # Gzipped tar
+    tar_mode = 'r:gz'
+else:
+    # Plain tar (might happen if browser/server decompressed it)
+    tar_mode = 'r'
+
+with tarfile.open(fileobj=archive_buffer, mode=tar_mode) as tar:
+    for member in tar.getmembers():
+        if member.isfile():
+            f = tar.extractfile(member)
+            files[member.name] = f.read()
+
+# Parse manifest
+manifest_json = files.get('manifest.json')
+if not manifest_json:
+    raise ValueError("No manifest.json found in archive")
+
+manifest_dict = json.loads(manifest_json.decode('utf-8'))
+manifest = BitstreamManifest.from_dict(manifest_dict)
+
+# Validate hardware
+if manifest.hw_rev != hw_rev_value:
+    raise ValueError(f"Hardware mismatch: attached Tiliqua (hw=r{hw_rev_value}) does not match archive (hw=r{manifest.hw_rev})")
+
+# Check if bootloader or user bitstream
+is_bootloader = any(r.region_type == RegionType.XipFirmware for r in manifest.regions)
+if is_bootloader and slot_value is not None:
+    raise ValueError("Bootloader bitstream must be flashed to bootloader slot (select 'Bootloader' option)")
+elif not is_bootloader and slot_value is None:
+    raise ValueError("User bitstream requires a slot selection (0-7)")
+
+# Compute concrete regions
+concrete_manifest, regions_to_flash = compute_concrete_regions_to_flash(manifest, slot_value)
+
+print('Desired layout:')
+for region in sorted(regions_to_flash):
+    print('-', region)
+
+# Update manifest in files
+files['manifest.json'] = json.dumps(concrete_manifest.to_dict()).encode('utf-8')
+
+# Generate commands using OpenFPGALoaderCommandSequence
+cmd_sequence = OpenFPGALoaderCommandSequence.from_flashable_regions(sorted(regions_to_flash))
+
+operations = []
+for cmd in cmd_sequence.commands:
+    # Strip 'openFPGALoader' (first element) to get args
+    args = cmd[1:]
+
+    # Filename is the last argument
+    filename = args[-1]
+
+    if filename not in files:
+        raise ValueError(f"File {filename} referenced in manifest but not found in archive")
+
+    data = files[filename]
+
+    operations.append({
+        'args': args,
+        'filename': filename,
+        'data': list(data),  # Convert bytes to list for JSON
+    })
+
+result = {
+    'operations': operations,
+    'manifest': concrete_manifest.to_dict(),
+    'is_bootloader': is_bootloader
+}
+
+json.dumps(result)
+        `);
+
+        const processedData = JSON.parse(result);
+
+        log('');
+
+        for (const op of processedData.operations) {
+            const data = new Uint8Array(op.data);
+
+            // Replace the filename in args with 'data' (the key in filesIn)
+            const args = [...op.args];
+            args[args.length - 1] = 'data';
+
+            log(`\x1b[34m$ openFPGALoader ${args.join(' ')}\x1b[0m`);
+
+            const filesIn = { 'data': data };
+
+            try {
+                await runOpenFPGALoader(args, filesIn, {
+                    stdout: (data) => {
+                        if (data && term) {
+                            term.write(new TextDecoder().decode(data));
+                        }
+                    },
+                    stderr: (data) => {
+                        if (data && term) {
+                            term.write(new TextDecoder().decode(data));
+                        }
+                    }
+                });
+            } catch (error) {
+                if (error instanceof Exit) {
+                    throw new Error(`Command failed with exit code ${error.code}`);
+                }
+                throw error;
+            }
+        }
+
+        log('');
+        log('\x1b[32m' + processedData.manifest.name + ' flashed to slot ' + slot + '\x1b[0m');
+}
+
+async function handleFlash() {
+    if (!selectedFile || tiliquaHwVersion === null) {
+        log('\x1b[31mNo file or device\x1b[0m');
+        return;
+    }
+
+    const slotValue = document.getElementById('slot').value;
+    const slot = slotValue === 'null' ? null : parseInt(slotValue);
+
+    log('');
+    log(`\x1b[1mFlash to ${slot === null ? 'Bootloader' : 'Slot ' + slot}: \x1b[0m`);
+
+    try {
+        document.getElementById('flash').disabled = true;
+        document.getElementById('slot').disabled = true;
+        document.getElementById('archive').disabled = true;
+
+        await doFlash(selectedFile, slot);
+    } catch (error) {
+        log('');
+        log(`\x1b[31m${error.message}\x1b[0m`);
+    } finally {
+        document.getElementById('flash').disabled = false;
+        document.getElementById('slot').disabled = false;
+        document.getElementById('archive').disabled = false;
+    }
+}
+
+async function handleFactoryReflash() {
+    if (tiliquaHwVersion === null) {
+        log('\x1b[31mNo device connected\x1b[0m');
+        return;
+    }
+
+    // Get factory mapping for this hardware version
+    const factoryMapping = FACTORY_MAPPINGS[tiliquaHwVersion];
+    if (!factoryMapping || factoryMapping.length === 0) {
+        log(`\x1b[31mNo factory mapping available for R${tiliquaHwVersion}\x1b[0m`);
+        return;
+    }
+
+    // Show confirmation dialog
+    const slotList = factoryMapping.map(m => `  Slot ${m.slot === null ? 'Bootloader' : m.slot}: ${m.bitstreamName}`).join('\n');
+    const confirmed = confirm(
+        `FACTORY REFLASH - This will erase and reflash all Tiliqua R${tiliquaHwVersion} slots.\n\n` +
+        `The following slots will be reflashed:\n${slotList}\n\nContinue?`
+    );
+
+    if (!confirmed) {
+        log('Factory reflash cancelled by user');
+        return;
+    }
+
+    log('');
+    log('\x1b[1mStarting factory reflash sequence...\x1b[0m');
+
+    // Disable all controls
+    const flashButton = document.getElementById('flash');
+    const factoryReflashButton = document.getElementById('factory-reflash');
+    const slotSelect = document.getElementById('slot');
+    const archiveInput = document.getElementById('archive');
+    const bitstreamSourceSelect = document.getElementById('bitstream-source');
+
+    flashButton.disabled = true;
+    factoryReflashButton.disabled = true;
+    slotSelect.disabled = true;
+    archiveInput.disabled = true;
+    bitstreamSourceSelect.disabled = true;
+
+    try {
+        for (let i = 0; i < factoryMapping.length; i++) {
+            const mapping = factoryMapping[i];
+            const slot = mapping.slot;
+            const bitstreamName = mapping.bitstreamName;
+
+            log('');
+            log(`\x1b[1m[${i + 1}/${factoryMapping.length}] Reflashing slot ${slot === null ? 'Bootloader' : slot} with ${bitstreamName}\x1b[0m`);
+
+            // Find the bitstream URL from AVAILABLE_BITSTREAMS
+            const bitstream = AVAILABLE_BITSTREAMS.find(b =>
+                b.url.endsWith(bitstreamName) || b.name === bitstreamName
+            );
+
+            if (!bitstream) {
+                throw new Error(`Bitstream "${bitstreamName}" not found in available bitstreams`);
+            }
+
+            // Fetch the bitstream
+            log(`Loading ${bitstream.url}...`);
+            const response = await fetch(bitstream.url);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const bitstreamData = await response.arrayBuffer();
+            log(`Loaded ${bitstreamName} (${bitstreamData.byteLength} bytes)`);
+
+            // Flash using the core flash logic
+            await doFlash(bitstreamData, slot);
+        }
+
+        log('');
+        log('\x1b[32m\x1b[1mFactory reflash complete! All slots reflashed successfully.\x1b[0m');
+
+    } catch (error) {
+        log('');
+        log(`\x1b[31m\x1b[1mFactory reflash failed: ${error.message}\x1b[0m`);
+    } finally {
+        // Re-enable controls
+        flashButton.disabled = false;
+        factoryReflashButton.disabled = false;
+        slotSelect.disabled = false;
+        archiveInput.disabled = false;
+        bitstreamSourceSelect.disabled = false;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    initTerminal();
+    initPyodide();
+    document.getElementById('connect').addEventListener('click', scanForTiliqua);
+    document.getElementById('bitstream-source').addEventListener('change', handleBitstreamSourceChange);
+    document.getElementById('archive').addEventListener('change', handleFileSelect);
+    document.getElementById('server-bitstreams').addEventListener('change', handleServerBitstreamSelect);
+    document.getElementById('flash').addEventListener('click', handleFlash);
+    document.getElementById('factory-reflash').addEventListener('click', handleFactoryReflash);
+});
+    </script>
+</body>
+</html>
