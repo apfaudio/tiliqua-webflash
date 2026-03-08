@@ -695,9 +695,7 @@ async function handleFactoryReflash() {
             log(`\x1b[1m[${i + 1}/${factoryMapping.length}] Reflashing slot ${slot === null ? 'Bootloader' : slot} with ${bitstreamName}\x1b[0m`);
 
             // Find the bitstream URL from AVAILABLE_BITSTREAMS
-            const bitstream = AVAILABLE_BITSTREAMS.find(b =>
-                b.url.endsWith(bitstreamName) || b.name === bitstreamName
-            );
+            const bitstream = AVAILABLE_BITSTREAMS.find(b => b.name === bitstreamName);
 
             if (!bitstream) {
                 throw new Error(`Bitstream "${bitstreamName}" not found in available bitstreams`);
