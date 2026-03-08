@@ -6,6 +6,7 @@ import urllib.request
 import json
 import zipfile
 import re
+import hashlib
 from pathlib import Path
 
 
@@ -271,6 +272,17 @@ export const FACTORY_MAPPINGS = {json.dumps(factory_mappings, indent=2)};
     bitstreams_js_path.write_text(bitstreams_js_content)
     print(f"Generated bitstreams.js with {len(bitstreams_list)} bitstream(s)")
     print(f"Generated factory mappings for hardware versions: {list(factory_mappings.keys())}")
+
+    # Add cache-busting hash to bitstreams.js import in index.html
+    index_html_path = build_dir / "index.html"
+    content_hash = hashlib.sha256(bitstreams_js_content.encode()).hexdigest()[:12]
+    index_html = index_html_path.read_text()
+    index_html = index_html.replace(
+        "'./bitstreams.js'",
+        f"'./bitstreams.js?v={content_hash}'"
+    )
+    index_html_path.write_text(index_html)
+    print(f"Added cache-busting hash: {content_hash}")
 
     print(f"Build completed successfully in {build_dir}")
 
