@@ -18,9 +18,9 @@ FACTORY_SLOT_ORDER = [
     ('macro-osc', 2),
     ('sid', 3),
     ('selftest', 4),
-    ('dsp-mdiff', 5),
+    ('sampler', 5),
     ('dsp-nco', 6),
-    ('dsp-vocode', 7),
+    ('dsp-mdiff', 7),
 ]
 
 
