@@ -7,6 +7,7 @@ import json
 import zipfile
 import re
 import hashlib
+import tarfile
 from pathlib import Path
 
 
@@ -207,13 +208,30 @@ def build_application():
             shutil.copy2(bitstream_file, bitstreams_dest / bitstream_file.name)
             print(f"Copied bitstream: {bitstream_file.name}")
 
+            bitstream_type = None
+            try:
+                with tarfile.open(bitstream_file, 'r:gz') as tar:
+                    manifest_member = tar.extractfile('manifest.json')
+                    if manifest_member:
+                        manifest_data = json.loads(manifest_member.read().decode('utf-8'))
+                        video_field = manifest_data.get('help', {}).get('video')
+                        if video_field == '<match-bootloader>':
+                            bitstream_type = 'Dynamic video (with CPU)'
+                        elif video_field == '<none>' or video_field is None:
+                            bitstream_type = 'Audio-only'
+                        else:
+                            bitstream_type = f'Static video ({video_field})'
+            except Exception as e:
+                print(f"Warning: Could not extract bitstream type from {bitstream_file.name}: {e}")
+
             # Track bitstream info for JS generation
             hw_rev = parse_hw_rev(bitstream_file.name)
             bitstreams_list.append({
                 'name': bitstream_file.name,
                 'size': bitstream_file.stat().st_size,
                 'url': f'bitstreams/{bitstream_file.name}',
-                'hw_rev': hw_rev
+                'hw_rev': hw_rev,
+                'bitstream_type': bitstream_type
             })
             copied_count += 1
 

@@ -420,17 +420,37 @@ function populateServerBitstreams() {
         bitstream.hw_rev === tiliquaHwVersion
     );
 
-    for (const bitstream of filteredBitstreams) {
-        const option = document.createElement('option');
-        option.value = bitstream.url;
-        const sizeKB = (bitstream.size / 1024).toFixed(1);
-        option.textContent = `${bitstream.name} (${sizeKB} KB)`;
-        serverSelect.appendChild(option);
-    }
-
     if (filteredBitstreams.length === 0) {
         const hwInfo = tiliquaHwVersion ? ` for R${tiliquaHwVersion}` : '';
         serverSelect.innerHTML = `<option value="">No bitstreams available${hwInfo}</option>`;
+        return;
+    }
+
+    const GROUP_ORDER = ['Dynamic video (with CPU)', 'Audio-only', 'Static video'];
+    const groups = {};
+    for (const bitstream of filteredBitstreams) {
+        const type = bitstream.bitstream_type || 'Unknown';
+        if (!groups[type]) groups[type] = [];
+        groups[type].push(bitstream);
+    }
+
+    const sortedKeys = Object.keys(groups).sort((a, b) => {
+        const ai = GROUP_ORDER.findIndex(p => a.startsWith(p));
+        const bi = GROUP_ORDER.findIndex(p => b.startsWith(p));
+        return (ai === -1 ? GROUP_ORDER.length : ai) - (bi === -1 ? GROUP_ORDER.length : bi);
+    });
+
+    for (const type of sortedKeys) {
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = type;
+        for (const bitstream of groups[type]) {
+            const option = document.createElement('option');
+            option.value = bitstream.url;
+            const sizeKB = (bitstream.size / 1024).toFixed(1);
+            option.textContent = `${bitstream.name} (${sizeKB} KB)`;
+            optgroup.appendChild(option);
+        }
+        serverSelect.appendChild(optgroup);
     }
 }
 
