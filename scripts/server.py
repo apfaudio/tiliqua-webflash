@@ -13,6 +13,12 @@ from pathlib import Path
 
 # Factory mapping order: defines which bitstreams go to which slots
 # Format: (bitstream_prefix, slot) where slot=None means bootloader
+BITSTREAM_SKIPLIST = [
+    'usb-audio',
+    'usb-host',
+    'bootstub',
+]
+
 FACTORY_SLOT_ORDER = [
     ('bootloader', None),
     ('xbeam', 0),
@@ -205,6 +211,9 @@ def build_application():
     if bitstreams_src.exists():
         copied_count = 0
         for bitstream_file in sorted(bitstreams_src.glob("*.tar.gz")):
+            if any(prefix in bitstream_file.name for prefix in BITSTREAM_SKIPLIST):
+                print(f"Skipped bitstream: {bitstream_file.name}")
+                continue
             shutil.copy2(bitstream_file, bitstreams_dest / bitstream_file.name)
             print(f"Copied bitstream: {bitstream_file.name}")
 
