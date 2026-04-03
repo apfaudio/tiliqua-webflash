@@ -199,6 +199,7 @@
         </ol>
         <p class="note"><strong>Browser Compatibility:</strong> This tool requires WebUSB support, which is only available in Chromium-based browsers (Chrome, Edge, Brave, etc.). Firefox and Safari are not supported.</p>
         <p class="note"><strong>USB Permissions:</strong> Tiliqua must be accessible without <code>sudo</code>. This should work out-of-the-box on macOS and Windows. On Linux, you may need to add a udev rule for USB device permissions. On some versions of Windows, you may need to use <a href="https://zadig.akeo.ie/" style="color:#6cf;">Zadig</a> to install a WinUSB driver for the device.</p>
+        <p class="note"><strong>Info on preview bitstreams:</strong> <a href="https://github.com/apfaudio/tiliqua/issues/160" style="color:#6cf;">vsynth</a>, <a href="https://github.com/apfaudio/tiliqua/issues/155" style="color:#6cf;">xbeam-ex</a></p>
     </div>
 
     <script type="module">
@@ -426,7 +427,7 @@ function populateServerBitstreams() {
         return;
     }
 
-    const GROUP_ORDER = ['Dynamic video (with CPU)', 'Audio-only', 'Static video'];
+    const GROUP_ORDER = ['Dynamic video (with CPU)', 'Audio-only', 'Static video', 'Preview'];
     const groups = {};
     for (const bitstream of filteredBitstreams) {
         const type = bitstream.bitstream_type || 'Unknown';

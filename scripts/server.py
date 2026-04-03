@@ -205,6 +205,7 @@ def build_application():
 
     # Copy bitstream archives from bitstreams/ directory
     bitstreams_src = project_root / "bitstreams"
+    bitstreams_preview_src = project_root / "bitstreams-preview"
     bitstreams_dest = build_dir / "bitstreams"
     bitstreams_list = []
 
@@ -248,6 +249,27 @@ def build_application():
             print("No .tar.gz bitstreams found in bitstreams/ directory")
     else:
         print("No bitstreams/ directory found - skipping bitstream copy")
+
+    # Copy preview bitstreams (not subject to skiplist, always typed as 'Preview')
+    if bitstreams_preview_src.exists():
+        preview_count = 0
+        for bitstream_file in sorted(bitstreams_preview_src.glob("*.tar.gz")):
+            shutil.copy2(bitstream_file, bitstreams_dest / bitstream_file.name)
+            print(f"Copied preview bitstream: {bitstream_file.name}")
+
+            hw_rev = parse_hw_rev(bitstream_file.name)
+            bitstreams_list.append({
+                'name': bitstream_file.name,
+                'size': bitstream_file.stat().st_size,
+                'url': f'bitstreams/{bitstream_file.name}',
+                'hw_rev': hw_rev,
+                'bitstream_type': 'Preview'
+            })
+            preview_count += 1
+
+        print(f"Copied {preview_count} preview bitstream(s)")
+    else:
+        print("No bitstreams-preview/ directory found - skipping preview bitstream copy")
 
     # Generate factory mappings for each hardware version
     factory_mappings = {}
