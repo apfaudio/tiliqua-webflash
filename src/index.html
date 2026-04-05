@@ -133,13 +133,25 @@
         #help ul {
             margin-top: 8px;
         }
+        #help li ol {
+            margin-top: 4px;
+            margin-left: 40px;
+            font-size: 0.85em;
+        }
+        #help li ol li {
+            margin-bottom: 2px;
+            line-height: 1.4;
+        }
         #help strong {
             color: #6cf;
         }
-        #help .note {
+        #help h2 ~ h2 {
             margin-top: 15px;
             padding-top: 15px;
             border-top: 1px solid #333;
+        }
+        #help .note {
+            margin-top: 15px;
             color: #4af;
         }
         #help code {
@@ -184,7 +196,24 @@
     <div id="terminal"></div>
 
     <div id="help">
-        <h2>How to Use</h2>
+        <h2>Setup</h2>
+        <ul>
+            <li><strong>macOS:</strong> No setup needed.</li>
+            <li><strong>Windows:</strong> Use <a href="https://zadig.akeo.ie/" style="color:#6cf;">Zadig</a> to install a WinUSB driver for the device:
+                <ol>
+                    <li>Plug in Tiliqua</li>
+                    <li>Run Zadig</li>
+                    <li>In the menu, under 'Options', choose 'List All Devices'</li>
+                    <li>In the main drop down, select the Tiliqua 'apfbug' device</li>
+                    <li>Select 'WinUSB' in the drop down near the green arrow</li>
+                    <li>Click 'Install Driver', wait for it to complete.</li>
+                    <li>Refresh this page, flashing should work.</li>
+                </ol>
+            </li>
+            <li><strong>Linux:</strong> You may need to add a <a href="https://apfaudio.github.io/tiliqua/install.html#check-usb-device-permissions" style="color:#6cf;">udev rule</a> so Tiliqua can be accessed without <code>sudo</code>.</li>
+        </ul>
+
+        <h2>Usage</h2>
         <ol>
             <li><strong>Wait for 'Ready' to be shown:</strong> it takes a few seconds for the dependencies to be downloaded.</li>
             <li><strong>Connect Tiliqua:</strong> 'dbg' (top) USB port to your computer.</li>
@@ -197,9 +226,8 @@
                 </ul>
             </li>
         </ol>
-        <p class="note"><strong>Browser Compatibility:</strong> This tool requires WebUSB support, which is only available in Chromium-based browsers (Chrome, Edge, Brave, etc.). Firefox and Safari are not supported.</p>
-        <p class="note"><strong>USB Permissions:</strong> Tiliqua must be accessible without <code>sudo</code>. This should work out-of-the-box on macOS and Windows. On Linux, you may need to add a udev rule for USB device permissions. On some versions of Windows, you may need to use <a href="https://zadig.akeo.ie/" style="color:#6cf;">Zadig</a> to install a WinUSB driver for the device.</p>
-        <p class="note"><strong>Info on preview bitstreams:</strong> <a href="https://github.com/apfaudio/tiliqua/issues/160" style="color:#6cf;">vsynth</a>, <a href="https://github.com/apfaudio/tiliqua/issues/155" style="color:#6cf;">xbeam-ex</a></p>
+        <h2>Preview Bitstreams</h2>
+        <p>Some unreleased bitstreams are available for testing. For documentation on these, see: <a href="https://github.com/apfaudio/tiliqua/issues/160" style="color:#6cf;">vsynth</a>, <a href="https://github.com/apfaudio/tiliqua/issues/155" style="color:#6cf;">xbeam-ex</a>.</p>
     </div>
 
     <script type="module">
@@ -611,6 +639,7 @@ json.dumps(result)
             log(`\x1b[34m$ openFPGALoader ${args.join(' ')}\x1b[0m`);
 
             const filesIn = { 'data': data };
+            let stderrOutput = '';
 
             try {
                 await runOpenFPGALoader(args, filesIn, {
@@ -621,12 +650,17 @@ json.dumps(result)
                     },
                     stderr: (data) => {
                         if (data && term) {
-                            term.write(new TextDecoder().decode(data));
+                            const text = new TextDecoder().decode(data);
+                            stderrOutput += text;
+                            term.write(text);
                         }
                     }
                 });
             } catch (error) {
                 if (error instanceof Exit) {
+                    if (stderrOutput.includes('fails to open device') || stderrOutput.includes('JTAG init failed')) {
+                        throw new Error('Could not communicate with Tiliqua. On Windows, you may need to install a USB driver using Zadig — see the instructions below.');
+                    }
                     throw new Error(`Command failed with exit code ${error.code}`);
                 }
                 throw error;
