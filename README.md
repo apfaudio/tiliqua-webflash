@@ -27,6 +27,17 @@ This project uses Pyodide to share most of Tiliqua's python code used for flashi
 
 It is basically a static HTML single-page website. It uses [coi-serviceworker](https://github.com/gzuidhof/coi-serviceworker) to allow SharedArrayBuffer (needed by Pyodide and openFPGALoader wasm) to work even though this site is statically served by GitHub Pages.
 
+# AI Disclosure
+
+To help with my (rusty) web development skills, Claude Opus 4.6 was used to assist in the creation of `tiliqua-webflash`, with a lot of work occuring in the months before nlnet's [Generative AI policy](https://nlnet.nl/foundation/policies/generativeAI/) was published on December 8, 2025. That being said, this AI generated code is essentially a visual frontend for Tiliqua's python-based flashing code (which was written by hand, and is run in the browser under Pyodide), and `openFPGALoader`, a separate open-source project. As a result of the overall architecture, the risk surface of e.g. some nefarious AI-generated bug bricking your Tiliqua is essentially nil, as the core flashing logic is shared with the Tiliqua project's command-line tools. In any case, for `tiliqua-webflash`, we provide the following guidelines concerning GenAI use:
+
+AI-assisted contributions are NOT accepted for:
+- The website text or documentation on the webpage
+- The python-based flashing code shared with the core Tiliqua codebase
+
+AI-assisted contributions ARE accepted for
+- The website css and javascript, upon careful review and considering nlnet's [Generative AI policy](https://nlnet.nl/foundation/policies/generativeAI/).
+
 # License
 
 Zero-clause BSD. Do whatever you want with the code in this repo.
