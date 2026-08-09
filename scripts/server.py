@@ -148,8 +148,15 @@ def download_latest_bitstreams(project_root):
 
     api_url = "https://api.github.com/repos/apfaudio/tiliqua/releases/latest"
 
+    headers = {}
+    token = os.environ.get('GITHUB_TOKEN')
+    if token:
+        headers['Authorization'] = f'Bearer {token}'
+    else:
+        print("GITHUB_TOKEN not set - using anonymous API access (low rate limit)")
+
     try:
-        with urllib.request.urlopen(api_url) as response:
+        with urllib.request.urlopen(urllib.request.Request(api_url, headers=headers)) as response:
             release_data = json.loads(response.read().decode())
 
         release_tag = release_data.get('tag_name', 'unknown')
@@ -163,8 +170,7 @@ def download_latest_bitstreams(project_root):
                 break
 
         if not bitstreams_asset:
-            print("Warning: No bitstreams.zip found in latest release")
-            return
+            raise RuntimeError(f"No bitstreams.zip asset in release {release_tag}")
 
         download_url = bitstreams_asset['browser_download_url']
         file_size = bitstreams_asset['size']
@@ -203,12 +209,8 @@ def download_latest_bitstreams(project_root):
         bitstream_count = len(list(bitstreams_dir.glob("*.tar.gz")))
         print(f"Extracted {bitstream_count} bitstream(s)")
 
-    except urllib.error.URLError as e:
-        print(f"Error fetching release: {e}")
-        print("Continuing with existing bitstreams (if any)...")
     except Exception as e:
-        print(f"Error processing bitstreams: {e}")
-        print("Continuing with existing bitstreams (if any)...")
+        raise RuntimeError(f"Could not fetch release bitstreams: {e}") from e
 
 
 def build_application():
@@ -309,6 +311,9 @@ def build_application():
             copied_count += 1
 
         print(f"Copied {copied_count} bitstream(s) from {dir_name}/")
+
+    if not any(b['bitstream_type'] not in ('Community', 'Preview') for b in bitstreams_list):
+        raise RuntimeError("No released bitstreams were copied")
 
     # Generate factory mappings for each hardware version
     factory_mappings = {}
