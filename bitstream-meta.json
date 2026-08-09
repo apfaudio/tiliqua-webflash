@@ -17,6 +17,10 @@
     "sonoro": {
       "author": "<a href=\"https://github.com/Naenyn\">@Naenyn</a>",
       "docs": "<a href=\"https://github.com/Naenyn/tiliqua/blob/sonoro/gateware/src/top/sonoro/top.py\">github.com/Naenyn/tiliqua</a>"
+    },
+    "oscio": {
+      "author": "<a href=\"https://github.com/Naenyn\">@Naenyn</a>",
+      "docs": "<a href=\"https://github.com/Naenyn/tiliqua/blob/oscio/gateware/src/top/oscio/top.py\">github.com/Naenyn/tiliqua</a>"
     }
   }
 }
