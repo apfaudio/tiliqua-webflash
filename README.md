@@ -2,12 +2,16 @@
 
 A little webapp for updating / flashing [tiliqua](https://github.com/apfelaudio/tiliqua) bitstreams in Web browsers that support WebUSB (like Chrome). It is live at [apfaudio.github.io/tiliqua-webflash](https://apfaudio.github.io/tiliqua-webflash/) and looks like this: 
 
-<img width="1335" height="1174" alt="image" src="https://github.com/user-attachments/assets/3e9df8b5-c110-4e8e-8407-a919b4dca72c" />
+<img width="935" height="799" alt="image" src="https://github.com/user-attachments/assets/99cd6397-d65b-427e-81a3-4b0dbb179717" />
+
+# Contributing bitstreams
+
+Per Tiliqua's [CONTRIBUTING.md](https://github.com/apfaudio/tiliqua/blob/main/CONTRIBUTING.md), third-party bitstreams are welcome - to merge a bitstream into the webflasher, check out this repository, put your bitstream into `bitstreams-community/` and update `bitstream-meta.json`. Then, you can file a PR, I'll test the bitstream to verify it works, and then merge it here.
 
 # Features
 
 - Auto-detect connected hardware revision and only show bitstreams compatible with it.
-- Flash a bitstream archive from your local computer.
+- Flash a bitstream archive from the latest release package, one of the community bitstreams, or a file from your computer.
 - Flash one of any bitstreams in the latest Tiliqua release.
 - Bootstrap a Tiliqua from scratch (flash the bootloader and all bitstreams to each slot). This does NOT bootstrap the RP2040, only the ECP5 SPI flash.
 
