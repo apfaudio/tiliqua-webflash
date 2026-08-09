@@ -13,6 +13,10 @@
     "xbeam-ex": {
       "author": "<a href=\"https://github.com/apfaudio\">apf.audio</a>",
       "docs": "<a href=\"https://github.com/apfaudio/tiliqua/issues/155\">github.com/apfaudio/tiliqua/issues/155</a>"
+    },
+    "sonoro": {
+      "author": "<a href=\"https://github.com/Naenyn\">@Naenyn</a>",
+      "docs": "<a href=\"https://github.com/Naenyn/tiliqua/blob/sonoro/gateware/src/top/sonoro/top.py\">github.com/Naenyn/tiliqua</a>"
     }
   }
 }
