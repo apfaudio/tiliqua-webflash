@@ -1,0 +1,18 @@
+{
+  "defaults": {
+    "release": {
+      "author": "<a href=\"https://github.com/apfaudio\">apf.audio</a> and contributors",
+      "docs": "<a href=\"https://apfaudio.github.io/tiliqua/examples/index.html\">apfaudio.github.io/tiliqua/examples</a>"
+    }
+  },
+  "bitstreams": {
+    "vsynth": {
+      "author": "<a href=\"https://github.com/apfaudio\">apf.audio</a>",
+      "docs": "<a href=\"https://github.com/apfaudio/tiliqua/issues/160\">github.com/apfaudio/tiliqua/issues/160</a>"
+    },
+    "xbeam-ex": {
+      "author": "<a href=\"https://github.com/apfaudio\">apf.audio</a>",
+      "docs": "<a href=\"https://github.com/apfaudio/tiliqua/issues/155\">github.com/apfaudio/tiliqua/issues/155</a>"
+    }
+  }
+}

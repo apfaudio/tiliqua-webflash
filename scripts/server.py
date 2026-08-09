@@ -28,7 +28,7 @@ FACTORY_SLOT_ORDER = [
     ('selftest', 4),
     ('sampler', 5),
     ('dsp-nco', 6),
-    ('dsp-mdiff', 7),
+    ('vsynth', 7),
 ]
 
 
@@ -38,6 +38,68 @@ def parse_hw_rev(filename):
     if match:
         return int(match.group(1))
     return None
+
+
+def bitstream_key(filename):
+    """Stable key for a bitstream archive, ignoring version and hw revision."""
+    stem = re.sub(r'-r\d+\.tar\.gz$', '', filename)
+    return re.sub(r'-(v[\d.]+|[0-9a-f]{6,})$', '', stem)
+
+
+def load_bitstream_meta(project_root):
+    """Load author/docs metadata. Missing file just means no links are shown."""
+    meta_path = project_root / "bitstream-meta.json"
+    if not meta_path.exists():
+        print("No bitstream-meta.json found - author/docs links will be omitted")
+        return {}
+    return json.loads(meta_path.read_text())
+
+
+def resolve_bitstream_meta(filename, meta, default_key):
+    """Find the metadata entry for a bitstream."""
+    entries = meta.get('bitstreams', {})
+    key = bitstream_key(filename)
+
+    entry = entries.get(key)
+    if entry is None:
+        candidates = [k for k in entries if key.startswith(k + '-')]
+        if candidates:
+            entry = entries[max(candidates, key=len)]
+
+    default = meta.get('defaults', {}).get(default_key)
+    if entry is None and default is None:
+        raise ValueError(
+            f"No bitstream-meta.json entry for '{key}' ({filename}), and no "
+            f"default for this folder. Add a '{key}' entry with author/docs."
+        )
+
+    resolved = dict(default or {})
+    resolved.update({k: v for k, v in (entry or {}).items() if v})
+    return {k: v for k, v in resolved.items() if v}
+
+
+def read_manifest(bitstream_file):
+    """Read manifest.json out of a bitstream archive. Returns {} on failure."""
+    try:
+        with tarfile.open(bitstream_file, 'r:gz') as tar:
+            manifest_member = tar.extractfile('manifest.json')
+            if manifest_member:
+                return json.loads(manifest_member.read().decode('utf-8'))
+    except Exception as e:
+        print(f"Warning: Could not read manifest from {bitstream_file.name}: {e}")
+    return {}
+
+
+def classify_bitstream(manifest_data):
+    """Group a bitstream by the kind of video output its manifest declares."""
+    if not manifest_data:
+        return None
+    video_field = manifest_data.get('help', {}).get('video')
+    if video_field == '<match-bootloader>':
+        return 'Dynamic video (with CPU)'
+    if video_field == '<none>' or video_field is None:
+        return 'Audio-only'
+    return f'Static video ({video_field})'
 
 
 def flatten_bitstreams_directory(bitstreams_dir):
@@ -175,6 +237,10 @@ def build_application():
     files_to_copy = [
         ("src/index.html", "index.html"),
         ("src/coi-serviceworker.js", "coi-serviceworker.js"),
+        ("src/pixeldocs.js", "pixeldocs.js"),
+        ("src/tiliqua.png", "tiliqua.png"),
+        ("src/font9x15.png", "font9x15.png"),
+        ("src/font9x15b.png", "font9x15b.png"),
         # Python flash module
         ("tiliqua/gateware/src/tiliqua/flash/__init__.py", "tiliqua/flash/__init__.py"),
         ("tiliqua/gateware/src/tiliqua/flash/archive_loader.py", "tiliqua/flash/archive_loader.py"),
@@ -203,73 +269,46 @@ def build_application():
     (build_dir / "rs" / "manifest" / "__init__.py").touch()
     (build_dir / "rs" / "manifest" / "src" / "__init__.py").touch()
 
-    # Copy bitstream archives from bitstreams/ directory
-    bitstreams_src = project_root / "bitstreams"
-    bitstreams_preview_src = project_root / "bitstreams-preview"
+    # Copy bitstream archives
     bitstreams_dest = build_dir / "bitstreams"
     bitstreams_list = []
+    meta = load_bitstream_meta(project_root)
 
-    if bitstreams_src.exists():
+    sources = [
+        ("bitstreams", None, True, "release"),
+        ("bitstreams-community", "Community", False, None),
+        ("bitstreams-preview", "Preview", False, "preview"),
+    ]
+
+    for dir_name, fixed_type, apply_skiplist, default_key in sources:
+        src_dir = project_root / dir_name
+        if not src_dir.exists():
+            print(f"No {dir_name}/ directory found - skipping")
+            continue
+
         copied_count = 0
-        for bitstream_file in sorted(bitstreams_src.glob("*.tar.gz")):
-            if any(prefix in bitstream_file.name for prefix in BITSTREAM_SKIPLIST):
+        for bitstream_file in sorted(src_dir.glob("*.tar.gz")):
+            if apply_skiplist and any(p in bitstream_file.name for p in BITSTREAM_SKIPLIST):
                 print(f"Skipped bitstream: {bitstream_file.name}")
                 continue
+
             shutil.copy2(bitstream_file, bitstreams_dest / bitstream_file.name)
-            print(f"Copied bitstream: {bitstream_file.name}")
+            manifest_data = read_manifest(bitstream_file)
 
-            bitstream_type = None
-            try:
-                with tarfile.open(bitstream_file, 'r:gz') as tar:
-                    manifest_member = tar.extractfile('manifest.json')
-                    if manifest_member:
-                        manifest_data = json.loads(manifest_member.read().decode('utf-8'))
-                        video_field = manifest_data.get('help', {}).get('video')
-                        if video_field == '<match-bootloader>':
-                            bitstream_type = 'Dynamic video (with CPU)'
-                        elif video_field == '<none>' or video_field is None:
-                            bitstream_type = 'Audio-only'
-                        else:
-                            bitstream_type = f'Static video ({video_field})'
-            except Exception as e:
-                print(f"Warning: Could not extract bitstream type from {bitstream_file.name}: {e}")
-
-            # Track bitstream info for JS generation
-            hw_rev = parse_hw_rev(bitstream_file.name)
-            bitstreams_list.append({
+            entry = {
                 'name': bitstream_file.name,
                 'size': bitstream_file.stat().st_size,
                 'url': f'bitstreams/{bitstream_file.name}',
-                'hw_rev': hw_rev,
-                'bitstream_type': bitstream_type
-            })
+                'hw_rev': parse_hw_rev(bitstream_file.name),
+                'bitstream_type': fixed_type or classify_bitstream(manifest_data),
+                'title': manifest_data.get('name'),
+                'help': manifest_data.get('help'),
+            }
+            entry.update(resolve_bitstream_meta(bitstream_file.name, meta, default_key))
+            bitstreams_list.append(entry)
             copied_count += 1
 
-        if copied_count == 0:
-            print("No .tar.gz bitstreams found in bitstreams/ directory")
-    else:
-        print("No bitstreams/ directory found - skipping bitstream copy")
-
-    # Copy preview bitstreams (not subject to skiplist, always typed as 'Preview')
-    if bitstreams_preview_src.exists():
-        preview_count = 0
-        for bitstream_file in sorted(bitstreams_preview_src.glob("*.tar.gz")):
-            shutil.copy2(bitstream_file, bitstreams_dest / bitstream_file.name)
-            print(f"Copied preview bitstream: {bitstream_file.name}")
-
-            hw_rev = parse_hw_rev(bitstream_file.name)
-            bitstreams_list.append({
-                'name': bitstream_file.name,
-                'size': bitstream_file.stat().st_size,
-                'url': f'bitstreams/{bitstream_file.name}',
-                'hw_rev': hw_rev,
-                'bitstream_type': 'Preview'
-            })
-            preview_count += 1
-
-        print(f"Copied {preview_count} preview bitstream(s)")
-    else:
-        print("No bitstreams-preview/ directory found - skipping preview bitstream copy")
+        print(f"Copied {copied_count} bitstream(s) from {dir_name}/")
 
     # Generate factory mappings for each hardware version
     factory_mappings = {}
@@ -322,18 +361,41 @@ export const FACTORY_MAPPINGS = {json.dumps(factory_mappings, indent=2)};
     print(f"Generated bitstreams.js with {len(bitstreams_list)} bitstream(s)")
     print(f"Generated factory mappings for hardware versions: {list(factory_mappings.keys())}")
 
-    # Add cache-busting hash to bitstreams.js import in index.html
-    index_html_path = build_dir / "index.html"
-    content_hash = hashlib.sha256(bitstreams_js_content.encode()).hexdigest()[:12]
-    index_html = index_html_path.read_text()
-    index_html = index_html.replace(
-        "'./bitstreams.js'",
-        f"'./bitstreams.js?v={content_hash}'"
-    )
-    index_html_path.write_text(index_html)
-    print(f"Added cache-busting hash: {content_hash}")
+    add_cache_busting(build_dir)
 
     print(f"Build completed successfully in {build_dir}")
+
+
+def add_cache_busting(build_dir):
+    """Append ?v=<hash> to every reference to an asset we ship ourselves."""
+    def content_hash(path):
+        return hashlib.sha256(path.read_bytes()).hexdigest()[:12]
+
+    def bust(referrer, assets):
+        text = referrer.read_text()
+        for asset in assets:
+            name = asset.name
+            hashed = f"{name}?v={content_hash(asset)}"
+            for quote in ("'", '"'):
+                for prefix in ("./", ""):
+                    text = text.replace(
+                        f"{quote}{prefix}{name}{quote}",
+                        f"{quote}{prefix}{hashed}{quote}",
+                    )
+            print(f"Cache-busted {name} in {referrer.name}: {hashed}")
+        referrer.write_text(text)
+
+    pixeldocs = build_dir / "pixeldocs.js"
+    bust(pixeldocs, [
+        build_dir / "tiliqua.png",
+        build_dir / "font9x15.png",
+        build_dir / "font9x15b.png",
+    ])
+
+    bust(build_dir / "index.html", [
+        build_dir / "bitstreams.js",
+        pixeldocs,
+    ])
 
 
 def serve_application():

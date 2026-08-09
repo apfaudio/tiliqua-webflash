@@ -32,8 +32,114 @@
             text-transform: uppercase;
             letter-spacing: 2px;
         }
-        .controls {
-            margin-bottom: 15px;
+        .layout {
+            max-width: 860px;
+        }
+        .source-unit {
+            display: inline-block;
+        }
+        #source-row {
+            align-items: flex-start;
+        }
+        #source-row .ctl-label {
+            padding-top: 8px;
+        }
+        .source-unit.linked {
+            border: 1px solid #4af;
+        }
+        .source-unit.linked #server-bitstreams,
+        .source-unit.linked #archive-label {
+            display: block;
+            width: 100%;
+            border: none;
+            border-bottom: 1px solid #4af;
+        }
+        .source-unit.linked #archive-label {
+            text-align: center;
+        }
+        .docs-links {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #48a;
+        }
+        .docs-links a {
+            color: #6cf;
+            overflow-wrap: anywhere;
+        }
+        .docs {
+            display: none;
+        }
+        .source-unit.linked .docs {
+            display: block;
+            padding: 8px;
+        }
+        #docs-canvas {
+            display: block;
+            image-rendering: pixelated;
+            height: auto;
+            max-width: 100%;
+            margin: 0 auto;
+        }
+        .step {
+            border-left: 2px solid #234;
+            padding-left: 14px;
+            margin-bottom: 16px;
+            transition: opacity 0.2s;
+            position: relative;
+        }
+        .step.pending {
+            opacity: 0.4;
+        }
+        .step.active {
+            border-left-color: #4af;
+        }
+        .step-title {
+            font-size: 12px;
+            color: #6cf;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+        }
+        .step-num {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            line-height: 16px;
+            text-align: center;
+            border: 1px solid #6cf;
+            margin-right: 8px;
+            font-size: 11px;
+        }
+        .step-body {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+        }
+        .step-body > * {
+            margin-right: 0;
+        }
+        .step-body + .step-body {
+            margin-top: 8px;
+        }
+        .ctl-label {
+            min-width: 52px;
+        }
+        .ctl-label {
+            font-size: 12px;
+            color: #48a;
+        }
+        .mode-btn[aria-pressed="true"] {
+            background: #4af;
+            color: #000;
+        }
+        .mode-btn.danger[aria-pressed="true"] {
+            background: #f44;
+            color: #000;
         }
         button, select {
             font-family: 'JetBrains Mono', monospace;
@@ -41,7 +147,6 @@
             color: #4af;
             border: 1px solid #4af;
             padding: 6px 12px;
-            margin-right: 8px;
             font-size: 13px;
             cursor: pointer;
         }
@@ -73,7 +178,6 @@
             color: #4af;
             border: 1px solid #4af;
             padding: 6px 12px;
-            margin-right: 8px;
             font-size: 13px;
             cursor: pointer;
             display: inline-block;
@@ -89,11 +193,79 @@
         #status {
             color: #4af;
             font-size: 13px;
+            display: block;
+            min-height: 1.6em;
+            margin-top: 8px;
+            overflow-wrap: anywhere;
+        }
+        .linkish {
+            border: none;
+            background: none;
+            color: #48a;
+            padding: 0;
+            font-size: 12px;
+            text-decoration: underline;
+        }
+        .linkish:hover:not(:disabled) {
+            background: none;
+            color: #6cf;
+        }
+        #confirm-panel {
+            margin-top: 12px;
+            border: 1px solid #f44;
+            padding: 12px;
+        }
+        #confirm-panel .confirm-title {
+            color: #f44;
+            font-size: 13px;
+        }
+        #confirm-panel pre {
+            font-family: inherit;
+            font-size: 12px;
+            color: #6cf;
+            white-space: pre-wrap;
+            margin: 10px 0;
+        }
+        #confirm-panel .step-body {
+            margin-top: 10px;
+        }
+        #progress {
+            margin-top: 20px;
+        }
+        #progress-text {
+            font-size: 13px;
+            margin-bottom: 6px;
+            overflow-wrap: anywhere;
+        }
+        .progress-track {
+            height: 6px;
+            border: 1px solid #4af;
+        }
+        #progress-bar {
+            height: 100%;
+            width: 0;
+            background: #4af;
+            transition: width 0.2s linear;
+        }
+        #log {
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid #234;
+        }
+        #log-toggle {
+            display: block;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            padding: 6px 20px;
         }
         #terminal {
-            margin-top: 20px;
+            margin-top: 10px;
             border: 1px solid #4af;
             padding: 10px;
+        }
+        [hidden] {
+            display: none !important;
         }
         #terminal .xterm-viewport::-webkit-scrollbar {
             width: 10px;
@@ -108,53 +280,66 @@
         #terminal .xterm-viewport::-webkit-scrollbar-thumb:hover {
             background: #6cf;
         }
-        #help {
-            margin-top: 30px;
-            padding: 20px;
-            border: 1px solid #4af;
+        .help-btn {
+            width: 20px;
+            height: 20px;
+            line-height: 16px;
+            padding: 0;
+            font-size: 12px;
+            border: 1px solid #48a;
+            color: #48a;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        .help-btn:hover:not(:disabled) {
+            background: #48a;
+            color: #000;
+        }
+        .help-btn[aria-expanded="true"] {
+            background: #4af;
+            border-color: #4af;
+            color: #000;
+        }
+        .help-panel {
+            margin-top: 10px;
+            padding: 12px 16px;
+            border: 1px solid #234;
             background: #000;
+            font-size: 13px;
         }
-        #help h2 {
-            color: #4af;
-            font-size: 16px;
-            font-weight: normal;
-            margin-bottom: 15px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
+        .help-panel.highlight {
+            border-color: #f44;
         }
-        #help ol, #help ul {
+        .help-panel ol, .help-panel ul {
             margin-left: 20px;
             margin-bottom: 10px;
         }
-        #help li {
+        .help-panel > :last-child {
+            margin-bottom: 0;
+        }
+        .help-panel li {
             margin-bottom: 8px;
             line-height: 1.8;
         }
-        #help ul {
+        .help-panel ul {
             margin-top: 8px;
         }
-        #help li ol {
+        .help-panel li ol {
             margin-top: 4px;
             margin-left: 40px;
             font-size: 0.85em;
         }
-        #help li ol li {
+        .help-panel li ol li {
             margin-bottom: 2px;
             line-height: 1.4;
         }
-        #help strong {
+        .help-panel strong {
             color: #6cf;
         }
-        #help h2 ~ h2 {
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 1px solid #333;
+        .help-panel a {
+            color: #6cf;
         }
-        #help .note {
-            margin-top: 15px;
-            color: #4af;
-        }
-        #help code {
+        .help-panel code {
             background: #111;
             padding: 2px 6px;
             border: 1px solid #333;
@@ -165,80 +350,116 @@
 <body>
     <h1>Tiliqua Flasher</h1>
 
-    <div class="controls">
-        <button id="connect">Connect to Tiliqua</button>
+    <div class="layout">
+
+    <div class="step active" id="step-connect">
+        <div class="step-title"><span class="step-num">1</span>Connect<button type="button" class="help-btn" data-help="help-connect" aria-expanded="false" aria-label="Help for step 1">?</button></div>
+        <div class="step-body">
+            <button id="connect" disabled>Connect to Tiliqua</button>
+        </div>
         <span id="status">Not connected</span>
+        <div class="help-panel" id="help-connect" hidden>
+            <ol>
+                <li><strong>Wait for 'Ready' to be shown:</strong> it takes a few seconds for the dependencies to be downloaded.</li>
+                <li><strong>Connect Tiliqua:</strong> Connect 'dbg' (top) USB port to your computer. Click 'Connect to Tiliqua' button, select your device.</li>
+            </ol>
+            <ul>
+                <li>Only <strong>Chrome is supported by WebUSB</strong>. Edge may work, but is slow.</li>
+                <li><strong>macOS:</strong> No setup needed.</li>
+                <li><strong>Windows:</strong> Use <a href="https://zadig.akeo.ie/">Zadig</a> to install a WinUSB driver for the device:
+                    <ol>
+                        <li>Plug in Tiliqua</li>
+                        <li>Run Zadig</li>
+                        <li>In the menu, under 'Options', choose 'List All Devices'</li>
+                        <li>In the main drop down, select the Tiliqua 'apfbug' device</li>
+                        <li>Select 'WinUSB' in the drop down near the green arrow</li>
+                        <li>Click 'Install Driver', wait for it to complete.</li>
+                        <li>Refresh this page, flashing should work.</li>
+                    </ol>
+                </li>
+                <li><strong>Linux:</strong> You may need to add a <a href="https://apfaudio.github.io/tiliqua/install.html#check-usb-device-permissions">udev rule</a> so Tiliqua can be accessed without <code>sudo</code>.</li>
+            </ul>
+        </div>
     </div>
 
-    <div class="controls">
-        <select id="bitstream-source" disabled>
-            <option value="server">Select from Server</option>
-            <option value="file">Upload File</option>
-        </select>
-        <label for="archive" class="disabled" id="archive-label" style="display:none;">Choose File</label>
-        <input type="file" id="archive" accept=".tar.gz" disabled style="display:none;">
-        <select id="server-bitstreams" class="disabled" disabled></select>
-        <select id="slot" disabled>
-            <option value="null">Bootloader</option>
-            <option value="0" selected>Slot 0</option>
-            <option value="1">Slot 1</option>
-            <option value="2">Slot 2</option>
-            <option value="3">Slot 3</option>
-            <option value="4">Slot 4</option>
-            <option value="5">Slot 5</option>
-            <option value="6">Slot 6</option>
-            <option value="7">Slot 7</option>
-        </select>
-        <button id="flash" disabled>Flash</button>
-        <button id="factory-reflash" class="danger" disabled>Factory Reflash</button>
+    <div class="step pending" id="step-bitstream">
+        <div class="step-title"><span class="step-num">2</span>Choose Source</div>
+        <div class="step-body" id="source-modes">
+            <button type="button" class="mode-btn" data-mode="release" aria-pressed="false" disabled>Latest Release</button>
+            <button type="button" class="mode-btn" data-mode="preview" aria-pressed="false" disabled>Community / Preview</button>
+            <button type="button" class="mode-btn" data-mode="file" aria-pressed="false" disabled>Local Machine</button>
+        </div>
     </div>
 
-    <div id="terminal"></div>
+    <div class="step pending" id="step-flash">
+        <div class="step-title"><span class="step-num">3</span>Flash<button type="button" class="help-btn" data-help="help-flash" aria-expanded="false" aria-label="Help for step 3">?</button></div>
+        <div class="step-body" id="source-row" hidden>
+            <span class="ctl-label">Source</span>
+            <div class="source-unit" id="source-unit">
+                <select id="server-bitstreams" disabled hidden></select>
+                <label for="archive" class="disabled" id="archive-label" hidden>Choose File</label>
+                <input type="file" id="archive" accept=".tar.gz" disabled hidden>
+                <div class="docs" id="docs">
+                    <canvas id="docs-canvas" hidden></canvas>
+                    <div class="docs-links" id="docs-links" hidden>
+                        <span id="docs-author" hidden>author: <span id="docs-author-value"></span></span>
+                        <span id="docs-doc" hidden>docs: <span id="docs-doc-value"></span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="step-body" id="flash-controls">
+            <span class="ctl-label">Target</span>
+            <select id="slot" disabled>
+                <option value="null">Bootloader</option>
+                <option value="0" selected>Slot 0</option>
+                <option value="1">Slot 1</option>
+                <option value="2">Slot 2</option>
+                <option value="3">Slot 3</option>
+                <option value="4">Slot 4</option>
+                <option value="5">Slot 5</option>
+                <option value="6">Slot 6</option>
+                <option value="7">Slot 7</option>
+            </select>
+            <button id="flash" disabled>Flash</button>
+        </div>
+        <div class="step-body" id="factory-controls" hidden>
+            <span class="ctl-label">or</span>
+            <button id="factory-reflash" class="danger" disabled>Factory Reflash</button>
+        </div>
+        <div id="confirm-panel" hidden>
+            <div class="confirm-title" id="confirm-title"></div>
+            <pre id="confirm-detail"></pre>
+            <div class="step-body">
+                <button id="confirm-yes" class="danger">Continue</button>
+                <button id="confirm-no">Cancel</button>
+            </div>
+        </div>
+        <div class="help-panel" id="help-flash" hidden>
+            <ul>
+                <li>Select a <strong>Slot (0-7)</strong> to flash it in (or 'bootloader' if you are updating the bootloader bitstream)</li>
+                <li>Click <strong>Flash</strong> and wait until flashing is complete. Tiliqua will automatically restart.</li>
+                <li>Alternatively, you can use <strong>Factory Reflash</strong>, which will wipe and reflash all slots with default bitstreams in their default positions from the latest Tiliqua gateware release.</li>
+            </ul>
+        </div>
+    </div>
 
-    <div id="help">
-        <h2>Browser</h2>
-        <ul>
-            <li>Only <strong>Chrome is supported by WebUSB</strong>. Edge may work, but is slow.</li>
-        </ul>
+    <div id="progress" hidden>
+        <div id="progress-text"></div>
+        <div class="progress-track"><div id="progress-bar"></div></div>
+    </div>
 
+    </div>
 
-        <h2>OS / Setup</h2>
-        <ul>
-            <li><strong>macOS:</strong> No setup needed.</li>
-            <li><strong>Windows:</strong> Use <a href="https://zadig.akeo.ie/" style="color:#6cf;">Zadig</a> to install a WinUSB driver for the device:
-                <ol>
-                    <li>Plug in Tiliqua</li>
-                    <li>Run Zadig</li>
-                    <li>In the menu, under 'Options', choose 'List All Devices'</li>
-                    <li>In the main drop down, select the Tiliqua 'apfbug' device</li>
-                    <li>Select 'WinUSB' in the drop down near the green arrow</li>
-                    <li>Click 'Install Driver', wait for it to complete.</li>
-                    <li>Refresh this page, flashing should work.</li>
-                </ol>
-            </li>
-            <li><strong>Linux:</strong> You may need to add a <a href="https://apfaudio.github.io/tiliqua/install.html#check-usb-device-permissions" style="color:#6cf;">udev rule</a> so Tiliqua can be accessed without <code>sudo</code>.</li>
-        </ul>
-
-        <h2>Usage</h2>
-        <ol>
-            <li><strong>Wait for 'Ready' to be shown:</strong> it takes a few seconds for the dependencies to be downloaded.</li>
-            <li><strong>Connect Tiliqua:</strong> Connect 'dbg' (top) USB port to your computer. Click 'Connect to Tiliqua' button, select your device.</li>
-            <li><strong>Flash Tiliqua:</strong>
-                <ul>
-                    <li>Pick a bitstream with <strong>Select from Server</strong> or <strong>Upload File</strong></li>
-                    <li>Select a <strong>Slot (0-7)</strong> to flash it in (or 'bootloader' if you are updating the bootloader bitstream)</li>
-                    <li>Click <strong>Flash</strong> and wait until flashing is complete. Tiliqua will automatically restart.</li>
-                    <li>Alternatively, you can use <strong>Factory Reflash</strong>, which will wipe and reflash all slots with default bitstreams in their default positions from the latest Tiliqua gateware release.</li>
-                </ul>
-            </li>
-        </ol>
-        <h2>Preview Bitstreams</h2>
-        <p>Some unreleased bitstreams are available for testing. For documentation on these, see: <a href="https://github.com/apfaudio/tiliqua/issues/160" style="color:#6cf;">vsynth</a>, <a href="https://github.com/apfaudio/tiliqua/issues/155" style="color:#6cf;">xbeam-ex</a>.</p>
+    <div id="log">
+        <button type="button" id="log-toggle">Show log &#9660;</button>
+        <div id="terminal"></div>
     </div>
 
     <script type="module">
 import { runOpenFPGALoader, Exit } from 'https://cdn.jsdelivr.net/npm/@yowasp/openfpgaloader@1.0.0-16.156/gen/bundle.js';
 import { AVAILABLE_BITSTREAMS, FACTORY_MAPPINGS } from './bitstreams.js';
+import { loadDocsAssets, drawDocs, fitScale, DOCS_WIDTH } from './pixeldocs.js';
 
 // Global state
 let pyodide = null;
@@ -258,12 +479,122 @@ function initTerminal() {
     });
     term.open(document.getElementById('terminal'));
     term.writeln('Terminal initialized. Waiting for Pyodide...');
+    requestAnimationFrame(() => setLogVisible(false));
 }
 
 function log(message, style = '') {
     if (term) {
         term.writeln(style + message + '\x1b[0m');
     }
+}
+
+function setLogVisible(visible) {
+    document.getElementById('terminal').hidden = !visible;
+    document.getElementById('log-toggle').innerHTML = visible ? 'Hide log &#9650;' : 'Show log &#9660;';
+}
+
+function logIsVisible() {
+    return !document.getElementById('terminal').hidden;
+}
+
+function revealLog() {
+    if (!logIsVisible()) {
+        setLogVisible(true);
+    }
+    if (term) {
+        term.scrollToBottom();
+    }
+}
+
+function reportError(context, error) {
+    const message = (error && error.message) || String(error);
+    log(`\x1b[31m${context}: ${message}\x1b[0m`);
+    revealLog();
+}
+
+function setStep(id, state) {
+    const el = document.getElementById(id);
+    el.classList.toggle('pending', state === 'pending');
+    el.classList.toggle('active', state === 'active');
+}
+
+function setStatus(text, color = '#4af') {
+    const statusEl = document.getElementById('status');
+    statusEl.textContent = text;
+    statusEl.style.color = color;
+}
+
+function setHelpVisible(id, visible) {
+    const panel = document.getElementById(id);
+    panel.hidden = !visible;
+    const btn = document.querySelector(`.help-btn[data-help="${id}"]`);
+    if (btn) {
+        btn.setAttribute('aria-expanded', String(visible));
+    }
+    if (!visible) {
+        panel.classList.remove('highlight');
+    }
+}
+
+function revealHelp(id) {
+    setHelpVisible(id, true);
+    const panel = document.getElementById(id);
+    panel.classList.add('highlight');
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function progressShow(text) {
+    document.getElementById('progress').hidden = false;
+    document.getElementById('progress-text').textContent = text;
+    document.getElementById('progress-bar').style.width = '0%';
+}
+
+function progressSet(fraction, text) {
+    document.getElementById('progress-bar').style.width = `${Math.round(fraction * 100)}%`;
+    if (text !== undefined) {
+        document.getElementById('progress-text').textContent = text;
+    }
+}
+
+function progressDone(text, color = '#4af') {
+    progressSet(1, text);
+    document.getElementById('progress-text').style.color = color;
+    document.getElementById('progress-bar').style.background = color;
+}
+
+function progressFail(text) {
+    document.getElementById('progress-text').textContent = text;
+    document.getElementById('progress-text').style.color = '#ff6b6b';
+    document.getElementById('progress-bar').style.background = '#f44';
+}
+
+function progressReset() {
+    document.getElementById('progress-text').style.color = '#4af';
+    document.getElementById('progress-bar').style.background = '#4af';
+}
+
+function confirmPanel(title, detail) {
+    return new Promise((resolve) => {
+        const panel = document.getElementById('confirm-panel');
+        const yes = document.getElementById('confirm-yes');
+        const no = document.getElementById('confirm-no');
+
+        document.getElementById('confirm-title').textContent = title;
+        document.getElementById('confirm-detail').textContent = detail;
+        panel.hidden = false;
+
+        const finish = (result) => {
+            panel.hidden = true;
+            yes.removeEventListener('click', onYes);
+            no.removeEventListener('click', onNo);
+            resolve(result);
+        };
+        const onYes = () => finish(true);
+        const onNo = () => finish(false);
+
+        yes.addEventListener('click', onYes);
+        no.addEventListener('click', onNo);
+    });
 }
 
 // Initialize Pyodide
@@ -277,10 +608,13 @@ async function initPyodide() {
         if (!crossOriginIsolated) {
             log('\x1b[31mError: SharedArrayBuffer not available\x1b[0m');
             log('\x1b[31mTry manually refreshing the page\x1b[0m');
+            setStatus('Error: SharedArrayBuffer not available. Try manually refreshing the page.', '#ff6b6b');
+            revealLog();
             return;
         }
     }
 
+    setStatus('Loading dependencies…');
     log('Loading Pyodide...');
     pyodide = await loadPyodide();
 
@@ -342,6 +676,7 @@ async function initPyodide() {
     }
 
     log('\x1b[32mReady\x1b[0m');
+    setStatus('Ready — not connected');
     document.getElementById('connect').disabled = false;
 }
 
@@ -377,16 +712,13 @@ async function scanForTiliqua() {
         tiliquaHwVersion = parseInt(hwVersionMatch[1]);
         log(`\x1b[32mConnected: ${productName} (R${tiliquaHwVersion}, ${tiliquaDevice.serialNumber})\x1b[0m`);
 
-        const statusEl = document.getElementById('status');
-        statusEl.textContent = `Connected: ${productName}`;
-        statusEl.style.color = '#4CAF50';
+        setStatus(`Connected: ${productName}`, '#4CAF50');
 
-        // Enable bitstream source selection and show server list by default
-        document.getElementById('bitstream-source').disabled = false;
-        handleBitstreamSourceChange();
-
-        // Enable factory reflash button
-        document.getElementById('factory-reflash').disabled = false;
+        setStep('step-bitstream', 'active');
+        for (const btn of document.querySelectorAll('.mode-btn')) {
+            btn.disabled = false;
+        }
+        setSource(null);
 
         return tiliquaHwVersion;
 
@@ -403,53 +735,156 @@ async function scanForTiliqua() {
         log(`\x1b[31m${errorMsg}\x1b[0m`);
         log(`\x1b[31m${additionalInfo}\x1b[0m`)
 
-        const statusEl = document.getElementById('status');
-        statusEl.textContent = `Error: ${errorMsg}`;
-        statusEl.style.color = '#ff6b6b';
+        setStatus(`Error: ${errorMsg} ${additionalInfo}`, '#ff6b6b');
+        revealLog();
+        revealHelp('help-connect');
         return null;
     }
 }
 
-function handleBitstreamSourceChange() {
-    const sourceSelect = document.getElementById('bitstream-source');
+let bitstreamSource = null;
+
+function setSource(source) {
     const fileLabel = document.getElementById('archive-label');
     const fileInput = document.getElementById('archive');
     const serverSelect = document.getElementById('server-bitstreams');
+    const sourceRow = document.getElementById('source-row');
     const slotSelect = document.getElementById('slot');
     const flashButton = document.getElementById('flash');
 
+    bitstreamSource = source;
+
+    for (const btn of document.querySelectorAll('.mode-btn')) {
+        btn.setAttribute('aria-pressed', String(btn.dataset.mode === source));
+    }
+
     // Reset selection
     selectedFile = null;
+    renderDocs(null);
     slotSelect.disabled = true;
     flashButton.disabled = true;
 
-    if (sourceSelect.value === 'file') {
-        // Show file upload, hide server select
-        fileLabel.style.display = '';
-        fileInput.style.display = '';
-        fileLabel.classList.remove('disabled');
-        fileInput.disabled = false;
-        serverSelect.style.display = 'none';
-        serverSelect.disabled = true;
-        fileLabel.textContent = 'Choose File';
-    } else {
-        // Show server select, hide file upload
-        fileLabel.style.display = 'none';
-        fileInput.style.display = 'none';
-        serverSelect.style.display = '';
-        serverSelect.disabled = false;
+    const usesServerList = source === 'release' || source === 'preview';
+    serverSelect.hidden = !usesServerList;
+    serverSelect.disabled = !usesServerList;
+    fileLabel.hidden = source !== 'file';
+    fileInput.disabled = source !== 'file';
+    sourceRow.hidden = source === null;
+
+    if (usesServerList) {
         serverSelect.classList.remove('disabled');
-        populateServerBitstreams();
+        populateServerBitstreams(source);
+    } else if (source === 'file') {
+        fileLabel.classList.remove('disabled');
+        fileLabel.textContent = 'Choose File';
     }
+
+    document.getElementById('flash-controls').hidden = source === null;
+    document.getElementById('factory-controls').hidden = source !== 'release';
+    document.getElementById('factory-reflash').disabled = source !== 'release';
+    setStep('step-flash', source === null ? 'pending' : 'active');
 }
 
-function populateServerBitstreams() {
+function setControlsBusy(busy) {
+    const connected = tiliquaHwVersion !== null;
+    const usesServerList = bitstreamSource === 'release' || bitstreamSource === 'preview';
+    const haveSelection = selectedFile !== null;
+
+    for (const btn of document.querySelectorAll('.mode-btn')) {
+        btn.disabled = busy || !connected;
+    }
+    document.getElementById('server-bitstreams').disabled = busy || !usesServerList;
+    document.getElementById('archive').disabled = busy || bitstreamSource !== 'file';
+    document.getElementById('slot').disabled = busy || !haveSelection;
+    document.getElementById('flash').disabled = busy || !haveSelection;
+    document.getElementById('factory-reflash').disabled = busy || bitstreamSource !== 'release';
+}
+
+let currentDocs = null;
+
+const UNIT_CHROME = 2 + 2 * 8;
+const STEP_CHROME = 2 + 14;
+
+function docsScale() {
+    const step = document.getElementById('step-flash');
+    const label = document.querySelector('#source-row .ctl-label');
+    const labelW = label ? label.offsetWidth + 8 : 0;
+    return fitScale(step.clientWidth - STEP_CHROME - labelW - UNIT_CHROME);
+}
+
+function renderDocs(info) {
+    currentDocs = info;
+    const canvas = document.getElementById('docs-canvas');
+    const unit = document.getElementById('source-unit');
+
+    lastScale = docsScale();
+    const drawn = drawDocs(canvas, info, lastScale);
+
+    canvas.hidden = !drawn;
+    unit.classList.toggle('linked', drawn);
+    unit.style.width = drawn ? `${DOCS_WIDTH * lastScale + UNIT_CHROME}px` : '';
+    renderDocsLinks(drawn ? info : null);
+}
+
+function renderDocsLinks(info) {
+    const author = setField('docs-author', 'docs-author-value', info && info.author);
+    const docs = setField('docs-doc', 'docs-doc-value', info && info.docs);
+    document.getElementById('docs-links').hidden = !(author || docs);
+}
+
+function setField(wrapperId, valueId, html) {
+    const shown = Boolean(html);
+    document.getElementById(wrapperId).hidden = !shown;
+    if (shown) {
+        const el = document.getElementById(valueId);
+        el.innerHTML = html;
+        for (const link of el.querySelectorAll('a[href]')) {
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+        }
+    }
+    return shown;
+}
+
+let lastScale = 0;
+
+function redrawDocs() {
+    if (!currentDocs) return;
+    if (docsScale() === lastScale) return;
+    renderDocs(currentDocs);
+}
+
+async function readArchiveManifest(bitstreamData) {
+    pyodide.globals.set('manifest_archive_bytes', new Uint8Array(bitstreamData));
+    const result = await pyodide.runPythonAsync(`
+import io
+import json
+import tarfile
+
+buf = io.BytesIO(bytes(manifest_archive_bytes))
+mode = 'r:gz' if buf.read(2) == b'\\x1f\\x8b' else 'r'
+buf.seek(0)
+with tarfile.open(fileobj=buf, mode=mode) as tar:
+    manifest_dict = json.loads(tar.extractfile('manifest.json').read().decode('utf-8'))
+
+json.dumps(manifest_dict)
+    `);
+    return JSON.parse(result);
+}
+
+function isUnreleased(bitstream) {
+    const type = bitstream.bitstream_type || '';
+    return type === 'Community' || type === 'Preview';
+}
+
+function populateServerBitstreams(source) {
     const serverSelect = document.getElementById('server-bitstreams');
     serverSelect.innerHTML = '<option value="">Select a bitstream...</option>';
 
     // Filter bitstreams by hardware version
     const filteredBitstreams = AVAILABLE_BITSTREAMS.filter(bitstream =>
-        bitstream.hw_rev === tiliquaHwVersion
+        bitstream.hw_rev === tiliquaHwVersion &&
+        isUnreleased(bitstream) === (source === 'preview')
     );
 
     if (filteredBitstreams.length === 0) {
@@ -458,7 +893,7 @@ function populateServerBitstreams() {
         return;
     }
 
-    const GROUP_ORDER = ['Dynamic video (with CPU)', 'Audio-only', 'Static video', 'Preview'];
+    const GROUP_ORDER = ['Dynamic video (with CPU)', 'Audio-only', 'Static video', 'Community', 'Preview'];
     const groups = {};
     for (const bitstream of filteredBitstreams) {
         const type = bitstream.bitstream_type || 'Unknown';
@@ -475,13 +910,13 @@ function populateServerBitstreams() {
     let defaultOption = null;
     for (const type of sortedKeys) {
         const optgroup = document.createElement('optgroup');
-        optgroup.label = type;
+        optgroup.label = type === 'Preview' ? 'Preview (unreleased)' : type;
         for (const bitstream of groups[type]) {
             const option = document.createElement('option');
             option.value = bitstream.url;
             const sizeKB = (bitstream.size / 1024).toFixed(1);
             option.textContent = `${bitstream.name} (${sizeKB} KB)`;
-            if (!defaultOption && bitstream.name.toLowerCase().includes('xbeam')) {
+            if (source === 'release' && !defaultOption && bitstream.name.toLowerCase().includes('xbeam')) {
                 defaultOption = option;
             }
             optgroup.appendChild(option);
@@ -518,6 +953,14 @@ async function handleFileSelect(event) {
         document.getElementById('slot').disabled = false;
         document.getElementById('flash').disabled = false;
         autoSelectSlot(file.name);
+
+        try {
+            const manifest = await readArchiveManifest(selectedFile);
+            renderDocs({ title: manifest.name, help: manifest.help });
+        } catch (error) {
+            reportError('Could not read manifest for docs', error);
+            renderDocs(null);
+        }
     }
 }
 
@@ -525,10 +968,13 @@ async function handleServerBitstreamSelect(event) {
     const url = event.target.value;
     if (!url) {
         selectedFile = null;
+        renderDocs(null);
         document.getElementById('slot').disabled = true;
         document.getElementById('flash').disabled = true;
         return;
     }
+
+    renderDocs(AVAILABLE_BITSTREAMS.find(b => b.url === url) || null);
 
     try {
         log(`Loading bitstream from server: ${url}`);
@@ -546,6 +992,7 @@ async function handleServerBitstreamSelect(event) {
         autoSelectSlot(fileName);
     } catch (error) {
         log(`\x1b[31mFailed to load bitstream: ${error.message}\x1b[0m`);
+        revealLog();
         selectedFile = null;
         document.getElementById('slot').disabled = true;
         document.getElementById('flash').disabled = true;
@@ -553,7 +1000,10 @@ async function handleServerBitstreamSelect(event) {
 }
 
 // Core flash logic - reusable for both single flash and batch update
-async function doFlash(bitstreamData, slot) {
+async function doFlash(bitstreamData, slot, range = [0, 1], label = '') {
+    const slotName = slot === null ? 'Bootloader' : `slot ${slot}`;
+    progressSet(range[0], `${label}Preparing ${slotName}…`);
+
     pyodide.globals.set('archive_bytes', new Uint8Array(bitstreamData));
     pyodide.globals.set('slot_value', slot);
     pyodide.globals.set('hw_rev_value', tiliquaHwVersion);
@@ -657,8 +1107,16 @@ json.dumps(result)
 
         log('');
 
-        for (const op of processedData.operations) {
+        const ops = processedData.operations;
+        for (let opIdx = 0; opIdx < ops.length; opIdx++) {
+            const op = ops[opIdx];
             const data = new Uint8Array(op.data);
+
+            const span = range[1] - range[0];
+            progressSet(
+                range[0] + span * (opIdx / ops.length),
+                `${label}Writing ${op.filename} to ${slotName} (${opIdx + 1}/${ops.length})…`
+            );
 
             // Replace the filename in args with 'data' (the key in filesIn)
             const args = [...op.args];
@@ -687,6 +1145,7 @@ json.dumps(result)
             } catch (error) {
                 if (error instanceof Exit) {
                     if (stderrOutput.includes('fails to open device') || stderrOutput.includes('JTAG init failed')) {
+                        revealHelp('help-connect');
                         throw new Error('Could not communicate with Tiliqua. On Windows, you may need to install a USB driver using Zadig — see the instructions below.');
                     }
                     throw new Error(`Command failed with exit code ${error.code}`);
@@ -695,8 +1154,12 @@ json.dumps(result)
             }
         }
 
+        progressSet(range[1]);
+
         log('');
         log('\x1b[32m' + processedData.manifest.name + ' flashed to slot ' + slot + '\x1b[0m');
+
+        return processedData.manifest.name;
 }
 
 async function handleFlash() {
@@ -708,22 +1171,25 @@ async function handleFlash() {
     const slotValue = document.getElementById('slot').value;
     const slot = slotValue === 'null' ? null : parseInt(slotValue);
 
+    const slotName = slot === null ? 'Bootloader' : 'Slot ' + slot;
+
     log('');
-    log(`\x1b[1mFlash to ${slot === null ? 'Bootloader' : 'Slot ' + slot}: \x1b[0m`);
+    log(`\x1b[1mFlash to ${slotName}: \x1b[0m`);
+
+    progressReset();
+    progressShow(`Flashing ${slotName}…`);
 
     try {
-        document.getElementById('flash').disabled = true;
-        document.getElementById('slot').disabled = true;
-        document.getElementById('archive').disabled = true;
-
-        await doFlash(selectedFile, slot);
+        setControlsBusy(true);
+        const name = await doFlash(selectedFile, slot);
+        progressDone(`${name} flashed to ${slotName}. Tiliqua will restart.`, '#4CAF50');
     } catch (error) {
         log('');
         log(`\x1b[31m${error.message}\x1b[0m`);
+        progressFail(`Failed: ${error.message}`);
+        revealLog();
     } finally {
-        document.getElementById('flash').disabled = false;
-        document.getElementById('slot').disabled = false;
-        document.getElementById('archive').disabled = false;
+        setControlsBusy(false);
     }
 }
 
@@ -742,9 +1208,9 @@ async function handleFactoryReflash() {
 
     // Show confirmation dialog
     const slotList = factoryMapping.map(m => `  Slot ${m.slot === null ? 'Bootloader' : m.slot}: ${m.bitstreamName}`).join('\n');
-    const confirmed = confirm(
-        `FACTORY REFLASH - This will erase and reflash all Tiliqua R${tiliquaHwVersion} slots.\n\n` +
-        `The following slots will be reflashed:\n${slotList}\n\nContinue?`
+    const confirmed = await confirmPanel(
+        `FACTORY REFLASH - This will erase and reflash all Tiliqua R${tiliquaHwVersion} slots.`,
+        `The following slots will be reflashed:\n${slotList}`
     );
 
     if (!confirmed) {
@@ -755,27 +1221,22 @@ async function handleFactoryReflash() {
     log('');
     log('\x1b[1mStarting factory reflash sequence...\x1b[0m');
 
-    // Disable all controls
-    const flashButton = document.getElementById('flash');
-    const factoryReflashButton = document.getElementById('factory-reflash');
-    const slotSelect = document.getElementById('slot');
-    const archiveInput = document.getElementById('archive');
-    const bitstreamSourceSelect = document.getElementById('bitstream-source');
+    setControlsBusy(true);
 
-    flashButton.disabled = true;
-    factoryReflashButton.disabled = true;
-    slotSelect.disabled = true;
-    archiveInput.disabled = true;
-    bitstreamSourceSelect.disabled = true;
+    progressReset();
+    progressShow('Starting factory reflash…');
 
     try {
         for (let i = 0; i < factoryMapping.length; i++) {
             const mapping = factoryMapping[i];
             const slot = mapping.slot;
             const bitstreamName = mapping.bitstreamName;
+            const label = `[${i + 1}/${factoryMapping.length}] ${bitstreamName}: `;
+            const range = [i / factoryMapping.length, (i + 1) / factoryMapping.length];
 
             log('');
             log(`\x1b[1m[${i + 1}/${factoryMapping.length}] Reflashing slot ${slot === null ? 'Bootloader' : slot} with ${bitstreamName}\x1b[0m`);
+            progressSet(range[0], `${label}downloading…`);
 
             // Find the bitstream URL from AVAILABLE_BITSTREAMS
             const bitstream = AVAILABLE_BITSTREAMS.find(b => b.name === bitstreamName);
@@ -795,30 +1256,46 @@ async function handleFactoryReflash() {
             log(`Loaded ${bitstreamName} (${bitstreamData.byteLength} bytes)`);
 
             // Flash using the core flash logic
-            await doFlash(bitstreamData, slot);
+            await doFlash(bitstreamData, slot, range, label);
         }
 
         log('');
         log('\x1b[32m\x1b[1mFactory reflash complete! All slots reflashed successfully.\x1b[0m');
+        progressDone('Factory reflash complete! All slots reflashed successfully.', '#4CAF50');
 
     } catch (error) {
         log('');
         log(`\x1b[31m\x1b[1mFactory reflash failed: ${error.message}\x1b[0m`);
+        progressFail(`Factory reflash failed: ${error.message}`);
+        revealLog();
     } finally {
-        // Re-enable controls
-        flashButton.disabled = false;
-        factoryReflashButton.disabled = false;
-        slotSelect.disabled = false;
-        archiveInput.disabled = false;
-        bitstreamSourceSelect.disabled = false;
+        setControlsBusy(false);
     }
 }
 
+window.addEventListener('error', (event) => reportError('Error', event.error || event.message));
+window.addEventListener('unhandledrejection', (event) => reportError('Error', event.reason));
+
 document.addEventListener('DOMContentLoaded', () => {
     initTerminal();
-    initPyodide();
+    loadDocsAssets().then(redrawDocs).catch((e) => reportError('Could not load docs assets', e));
+    initPyodide().catch((e) => {
+        reportError('Startup failed', e);
+        setStatus(`Startup failed: ${e.message || e}`, '#ff6b6b');
+    });
     document.getElementById('connect').addEventListener('click', scanForTiliqua);
-    document.getElementById('bitstream-source').addEventListener('change', handleBitstreamSourceChange);
+    for (const btn of document.querySelectorAll('.mode-btn')) {
+        btn.addEventListener('click', () => setSource(btn.dataset.mode));
+    }
+    document.getElementById('log-toggle').addEventListener('click', () => setLogVisible(!logIsVisible()));
+    window.addEventListener('resize', redrawDocs);
+    new ResizeObserver(redrawDocs).observe(document.querySelector('.layout'));
+    for (const btn of document.querySelectorAll('.help-btn')) {
+        btn.addEventListener('click', () => {
+            const id = btn.dataset.help;
+            setHelpVisible(id, document.getElementById(id).hidden);
+        });
+    }
     document.getElementById('archive').addEventListener('change', handleFileSelect);
     document.getElementById('server-bitstreams').addEventListener('change', handleServerBitstreamSelect);
     document.getElementById('flash').addEventListener('click', handleFlash);
