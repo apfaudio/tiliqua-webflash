@@ -133,6 +133,44 @@
             font-size: 12px;
             color: #48a;
         }
+        #source-modes {
+            align-items: flex-end;
+            gap: 20px;
+        }
+        .mode-group-btns {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .mode-group-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+            font-size: 11px;
+            color: #48a;
+            letter-spacing: 1px;
+            white-space: nowrap;
+        }
+        .mode-group-label::before, .mode-group-label::after {
+            content: '';
+            flex: 1;
+            height: 6px;
+            border-top: 1px solid #234;
+        }
+        .mode-group-label::before {
+            border-left: 1px solid #234;
+        }
+        .mode-group-label::after {
+            border-right: 1px solid #234;
+        }
+        #source-note {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #48a;
+            min-height: 1.6em;
+            overflow-wrap: anywhere;
+        }
         .mode-btn[aria-pressed="true"] {
             background: #4af;
             color: #000;
@@ -310,6 +348,22 @@
         .help-panel.highlight {
             border-color: #f44;
         }
+        .help-panel h3 {
+            font-size: 12px;
+            font-weight: normal;
+            color: #6cf;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid #234;
+        }
+        .help-panel p + h3, .help-panel ul + h3, .help-panel ol + h3 {
+            margin-top: 16px;
+        }
+        .help-panel p {
+            margin-bottom: 12px;
+        }
         .help-panel ol, .help-panel ul {
             margin-left: 20px;
             margin-bottom: 10px;
@@ -359,12 +413,9 @@
         </div>
         <span id="status">Not connected</span>
         <div class="help-panel" id="help-connect" hidden>
-            <ol>
-                <li><strong>Wait for 'Ready' to be shown:</strong> it takes a few seconds for the dependencies to be downloaded.</li>
-                <li><strong>Connect Tiliqua:</strong> Connect 'dbg' (top) USB port to your computer. Click 'Connect to Tiliqua' button, select your device.</li>
-            </ol>
+            <p>Only <strong>Chrome is supported by WebUSB</strong>. Edge may work, but is slow.</p>
+            <h3>Setup</h3>
             <ul>
-                <li>Only <strong>Chrome is supported by WebUSB</strong>. Edge may work, but is slow.</li>
                 <li><strong>macOS:</strong> No setup needed.</li>
                 <li><strong>Windows:</strong> Use <a href="https://zadig.akeo.ie/">Zadig</a> to install a WinUSB driver for the device:
                     <ol>
@@ -379,16 +430,33 @@
                 </li>
                 <li><strong>Linux:</strong> You may need to add a <a href="https://apfaudio.github.io/tiliqua/install.html#check-usb-device-permissions">udev rule</a> so Tiliqua can be accessed without <code>sudo</code>.</li>
             </ul>
+            <h3>Connecting</h3>
+            <ol>
+                <li><strong>Wait for 'Ready' to be shown:</strong> it takes a few seconds for the dependencies to be downloaded.</li>
+                <li><strong>Connect Tiliqua:</strong> Connect 'dbg' (top) USB port to your computer. Click 'Connect to Tiliqua' button, select your device.</li>
+            </ol>
         </div>
     </div>
 
     <div class="step pending" id="step-bitstream">
         <div class="step-title"><span class="step-num">2</span>Choose Source</div>
         <div class="step-body" id="source-modes">
-            <button type="button" class="mode-btn" data-mode="release" aria-pressed="false" disabled>Latest Release</button>
-            <button type="button" class="mode-btn" data-mode="preview" aria-pressed="false" disabled>Community / Preview</button>
-            <button type="button" class="mode-btn" data-mode="file" aria-pressed="false" disabled>Local Machine</button>
+            <div class="mode-group">
+                <div class="mode-group-label">from apf.audio</div>
+                <div class="mode-group-btns">
+                    <button type="button" class="mode-btn" data-mode="release" aria-pressed="false" disabled>Latest Release</button>
+                    <button type="button" class="mode-btn" data-mode="preview" aria-pressed="false" disabled>Preview</button>
+                </div>
+            </div>
+            <div class="mode-group">
+                <div class="mode-group-label">from elsewhere</div>
+                <div class="mode-group-btns">
+                    <button type="button" class="mode-btn" data-mode="community" aria-pressed="false" disabled>Community</button>
+                    <button type="button" class="mode-btn" data-mode="file" aria-pressed="false" disabled>Local Machine</button>
+                </div>
+            </div>
         </div>
+        <div id="source-note"></div>
     </div>
 
     <div class="step pending" id="step-flash">
@@ -439,7 +507,6 @@
             <ul>
                 <li>Select a <strong>Slot (0-7)</strong> to flash it in (or 'bootloader' if you are updating the bootloader bitstream)</li>
                 <li>Click <strong>Flash</strong> and wait until flashing is complete. Tiliqua will automatically restart.</li>
-                <li>Alternatively, you can use <strong>Factory Reflash</strong>, which will wipe and reflash all slots with default bitstreams in their default positions from the latest Tiliqua gateware release.</li>
             </ul>
         </div>
     </div>
@@ -744,6 +811,20 @@ async function scanForTiliqua() {
 
 let bitstreamSource = null;
 
+// Sources served from the bitstream index, matched against each bitstream's origin.
+const SERVER_SOURCES = ['release', 'preview', 'community'];
+
+function usesServerList(source) {
+    return SERVER_SOURCES.includes(source);
+}
+
+const SOURCE_NOTES = {
+    release: '\'Officially\' supported bitstreams released by apf.audio',
+    preview: 'Upcoming / work-in-progress bitstreams from apf.audio',
+    community: 'Tested to work, but not extensively audited, flash at your own risk!',
+    file: 'Flash something directly from your local machine',
+};
+
 function setSource(source) {
     const fileLabel = document.getElementById('archive-label');
     const fileInput = document.getElementById('archive');
@@ -758,20 +839,22 @@ function setSource(source) {
         btn.setAttribute('aria-pressed', String(btn.dataset.mode === source));
     }
 
+    document.getElementById('source-note').textContent = SOURCE_NOTES[source] || '';
+
     // Reset selection
     selectedFile = null;
     renderDocs(null);
     slotSelect.disabled = true;
     flashButton.disabled = true;
 
-    const usesServerList = source === 'release' || source === 'preview';
-    serverSelect.hidden = !usesServerList;
-    serverSelect.disabled = !usesServerList;
+    const fromServer = usesServerList(source);
+    serverSelect.hidden = !fromServer;
+    serverSelect.disabled = !fromServer;
     fileLabel.hidden = source !== 'file';
     fileInput.disabled = source !== 'file';
     sourceRow.hidden = source === null;
 
-    if (usesServerList) {
+    if (fromServer) {
         serverSelect.classList.remove('disabled');
         populateServerBitstreams(source);
     } else if (source === 'file') {
@@ -787,13 +870,13 @@ function setSource(source) {
 
 function setControlsBusy(busy) {
     const connected = tiliquaHwVersion !== null;
-    const usesServerList = bitstreamSource === 'release' || bitstreamSource === 'preview';
+    const fromServer = usesServerList(bitstreamSource);
     const haveSelection = selectedFile !== null;
 
     for (const btn of document.querySelectorAll('.mode-btn')) {
         btn.disabled = busy || !connected;
     }
-    document.getElementById('server-bitstreams').disabled = busy || !usesServerList;
+    document.getElementById('server-bitstreams').disabled = busy || !fromServer;
     document.getElementById('archive').disabled = busy || bitstreamSource !== 'file';
     document.getElementById('slot').disabled = busy || !haveSelection;
     document.getElementById('flash').disabled = busy || !haveSelection;
@@ -872,19 +955,14 @@ json.dumps(manifest_dict)
     return JSON.parse(result);
 }
 
-function isUnreleased(bitstream) {
-    const type = bitstream.bitstream_type || '';
-    return type === 'Community' || type === 'Preview';
-}
-
 function populateServerBitstreams(source) {
     const serverSelect = document.getElementById('server-bitstreams');
     serverSelect.innerHTML = '<option value="">Select a bitstream...</option>';
 
-    // Filter bitstreams by hardware version
+    // Filter bitstreams by hardware version and where they came from
     const filteredBitstreams = AVAILABLE_BITSTREAMS.filter(bitstream =>
         bitstream.hw_rev === tiliquaHwVersion &&
-        isUnreleased(bitstream) === (source === 'preview')
+        bitstream.origin === source
     );
 
     if (filteredBitstreams.length === 0) {
@@ -893,7 +971,7 @@ function populateServerBitstreams(source) {
         return;
     }
 
-    const GROUP_ORDER = ['Dynamic video (with CPU)', 'Audio-only', 'Static video', 'Community', 'Preview'];
+    const GROUP_ORDER = ['Dynamic video (with CPU)', 'Audio-only', 'Static video'];
     const groups = {};
     for (const bitstream of filteredBitstreams) {
         const type = bitstream.bitstream_type || 'Unknown';
@@ -909,8 +987,13 @@ function populateServerBitstreams(source) {
 
     let defaultOption = null;
     for (const type of sortedKeys) {
-        const optgroup = document.createElement('optgroup');
-        optgroup.label = type === 'Preview' ? 'Preview (unreleased)' : type;
+        // A single group repeats what the source button already says, so skip the header.
+        let parent = serverSelect;
+        if (sortedKeys.length > 1) {
+            parent = document.createElement('optgroup');
+            parent.label = type;
+            serverSelect.appendChild(parent);
+        }
         for (const bitstream of groups[type]) {
             const option = document.createElement('option');
             option.value = bitstream.url;
@@ -919,9 +1002,8 @@ function populateServerBitstreams(source) {
             if (source === 'release' && !defaultOption && bitstream.name.toLowerCase().includes('xbeam')) {
                 defaultOption = option;
             }
-            optgroup.appendChild(option);
+            parent.appendChild(option);
         }
-        serverSelect.appendChild(optgroup);
     }
 
     if (defaultOption) {

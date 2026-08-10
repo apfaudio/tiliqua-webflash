@@ -276,13 +276,15 @@ def build_application():
     bitstreams_list = []
     meta = load_bitstream_meta(project_root)
 
+    # Where a bitstream came from, which is independent of how it is categorized
+    # below - every source is grouped by video type in the same way.
     sources = [
-        ("bitstreams", None, True, "release"),
-        ("bitstreams-community", "Community", False, None),
-        ("bitstreams-preview", "Preview", False, "preview"),
+        ("bitstreams", "release", True, "release"),
+        ("bitstreams-community", "community", False, None),
+        ("bitstreams-preview", "preview", False, "preview"),
     ]
 
-    for dir_name, fixed_type, apply_skiplist, default_key in sources:
+    for dir_name, origin, apply_skiplist, default_key in sources:
         src_dir = project_root / dir_name
         if not src_dir.exists():
             print(f"No {dir_name}/ directory found - skipping")
@@ -302,7 +304,8 @@ def build_application():
                 'size': bitstream_file.stat().st_size,
                 'url': f'bitstreams/{bitstream_file.name}',
                 'hw_rev': parse_hw_rev(bitstream_file.name),
-                'bitstream_type': fixed_type or classify_bitstream(manifest_data),
+                'origin': origin,
+                'bitstream_type': classify_bitstream(manifest_data),
                 'title': manifest_data.get('name'),
                 'help': manifest_data.get('help'),
             }
@@ -312,7 +315,7 @@ def build_application():
 
         print(f"Copied {copied_count} bitstream(s) from {dir_name}/")
 
-    if not any(b['bitstream_type'] not in ('Community', 'Preview') for b in bitstreams_list):
+    if not any(b['origin'] == 'release' for b in bitstreams_list):
         raise RuntimeError("No released bitstreams were copied")
 
     # Generate factory mappings for each hardware version
