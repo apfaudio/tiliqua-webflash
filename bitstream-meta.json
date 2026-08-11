@@ -21,6 +21,10 @@
     "oscio": {
       "author": "<a href=\"https://github.com/Naenyn\">@Naenyn</a>",
       "docs": "<a href=\"https://github.com/Naenyn/tiliqua/blob/oscio/gateware/src/top/oscio/top.py\">github.com/Naenyn/tiliqua</a>"
+    },
+    "paula": {
+      "author": "<a href=\"https://github.com/matpalm\">Mat Kelcey</a>",
+      "docs": "<a href=\"https://www.matpalm.com/blog/paula_tiliqua/\">Midi controlled Paula FPGA core with sampling</a>"
     }
   }
 }
