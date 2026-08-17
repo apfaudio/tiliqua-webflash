@@ -25,6 +25,9 @@
     "paula": {
       "author": "<a href=\"https://github.com/matpalm\">Mat Kelcey</a>",
       "docs": "<a href=\"https://www.matpalm.com/blog/paula_tiliqua/\">Midi controlled Paula FPGA core with sampling</a>"
-    }
+    },
+    "inr-wvshpr": {
+      "author": "<a href=\"https://github.com/matpalm\">Mat Kelcey</a>",
+      "docs": "<a href=\"https://www.matpalm.com/blog/implicit_neural_oscillator/\">Embedding controlled neural oscillator</a>"    }
   }
 }
