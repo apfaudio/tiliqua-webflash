@@ -28,6 +28,10 @@
     },
     "inr-wvshpr": {
       "author": "<a href=\"https://github.com/matpalm\">Mat Kelcey</a>",
-      "docs": "<a href=\"https://www.matpalm.com/blog/implicit_neural_oscillator/\">Embedding controlled neural oscillator</a>"    }
+      "docs": "<a href=\"https://www.matpalm.com/blog/implicit_neural_oscillator/\">Embedding controlled neural oscillator</a>"    },
+    "xls24": {
+      "author": "<a href=\"https://github.com/kazunori279\">Kaz Sato</a>",
+      "docs": "<a href=\"https://github.com/kazunori279/xls32-fpga-synth\">github.com/kazunori279/xls32-fpga-synth</a>"
+    }
   }
 }
