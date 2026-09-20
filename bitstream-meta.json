@@ -26,6 +26,22 @@
       "author": "<a href=\"https://github.com/Naenyn\">@Naenyn</a>",
       "docs": "<a href=\"https://github.com/Naenyn/tiliqua/blob/oscio/gateware/src/top/oscio/top.py\">github.com/Naenyn/tiliqua</a>"
     },
+    "cascado": {
+      "author": "<a href=\"https://github.com/Naenyn\">@Naenyn</a>",
+      "docs": "<a href=\"https://github.com/Naenyn/tiliqua/blob/sonoro/gateware/src/top/cascado/top.py\">github.com/Naenyn/tiliqua</a>"
+    },
+    "rezo": {
+      "author": "<a href=\"https://github.com/Naenyn\">@Naenyn</a>",
+      "docs": "<a href=\"https://github.com/Naenyn/tiliqua/blob/rezo/gateware/src/top/rezo/rezo_variant.py\">github.com/Naenyn/tiliqua</a>"
+    },
+    "rezomo": {
+      "author": "<a href=\"https://github.com/Naenyn\">@Naenyn</a>",
+      "docs": "<a href=\"https://github.com/Naenyn/tiliqua/blob/rezo/gateware/src/top/rezo/top.py\">github.com/Naenyn/tiliqua</a>"
+    },
+    "strezo": {
+      "author": "<a href=\"https://github.com/Naenyn\">@Naenyn</a>",
+      "docs": "<a href=\"https://github.com/Naenyn/tiliqua/blob/rezo/gateware/src/top/rezo/strezo_variant.py\">github.com/Naenyn/tiliqua</a>"
+    },
     "paula": {
       "author": "<a href=\"https://github.com/matpalm\">Mat Kelcey</a>",
       "docs": "<a href=\"https://www.matpalm.com/blog/paula_tiliqua/\">Midi controlled Paula FPGA core with sampling</a>"
