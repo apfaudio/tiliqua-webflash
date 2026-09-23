@@ -692,7 +692,6 @@ async function initPyodide() {
     const emptyInitFiles = [
         'tiliqua/__init__.py',
         'tiliqua/build/__init__.py',
-        'tiliqua/flash/__init__.py',
         'rs/__init__.py',
         'rs/manifest/__init__.py',
         'rs/manifest/src/__init__.py',
@@ -715,7 +714,9 @@ async function initPyodide() {
 
     const pythonFiles = [
         'tiliqua/build/types.py',
+        'tiliqua/flash/__init__.py',
         'tiliqua/flash/archive_loader.py',
+        'tiliqua/flash/spiflash_status.py',
         'tiliqua/flash/spiflash_layout.py',
         'tiliqua/flash/openfpgaloader.py',
         'rs/manifest/src/lib.py',
@@ -1099,7 +1100,7 @@ import io
 import tarfile
 import json
 from tiliqua.build.types import BitstreamManifest, RegionType
-from tiliqua.flash.spiflash_layout import compute_concrete_regions_to_flash
+from tiliqua.flash.spiflash_layout import compute_concrete_regions_to_flash, SlotLayout, MANIFEST_SIZE
 from tiliqua.flash.openfpgaloader import OpenFPGALoaderCommandSequence
 
 # Extract archive
@@ -1179,7 +1180,9 @@ for cmd in cmd_sequence.commands:
 result = {
     'operations': operations,
     'manifest': concrete_manifest.to_dict(),
-    'is_bootloader': is_bootloader
+    'is_bootloader': is_bootloader,
+    'bl_manifest_addr': SlotLayout(None).manifest_addr,
+    'bl_manifest_size': MANIFEST_SIZE,
 }
 
 json.dumps(result)
@@ -1188,6 +1191,38 @@ json.dumps(result)
         const processedData = JSON.parse(result);
 
         log('');
+
+        try {
+        if (!processedData.is_bootloader) {
+            const blArgs = ['-c', 'dirtyJtag', '--dump-flash', '-o', '0x' + processedData.bl_manifest_addr.toString(16),
+                            '--file-size', String(processedData.bl_manifest_size), '--skip-reset', 'bl.bin'];
+            log(`\x1b[34m$ openFPGALoader ${blArgs.join(' ')}\x1b[0m`);
+            const filesOut = await runOpenFPGALoader(blArgs, {}, {
+                stdout: (data) => { if (data && term) term.write(new TextDecoder().decode(data)); },
+                stderr: (data) => { if (data && term) term.write(new TextDecoder().decode(data)); },
+                decodeASCII: false,
+            });
+            pyodide.globals.set('bl_manifest_bytes', filesOut['bl.bin']);
+            const blError = await pyodide.runPythonAsync(`
+from tiliqua.flash import check_bootloader_supports_archive, BootloaderTooOld
+from tiliqua.flash.spiflash_status import is_empty_flash, parse_json_from_flash
+data = bytes(bl_manifest_bytes)
+bl = None if is_empty_flash(data) else parse_json_from_flash(data)
+if bl is not None:
+    print(f"Bootloader on device: {bl.get('name')} {bl.get('tag')} (hw=r{bl.get('hw_rev')})")
+else:
+    print("Warning: no valid bootloader manifest found on device.")
+bl_error = None
+try:
+    check_bootloader_supports_archive(bl, manifest)
+except BootloaderTooOld as e:
+    bl_error = str(e)
+bl_error
+            `);
+            if (blError) {
+                throw new Error(`${blError} Please update the bootloader first.`);
+            }
+        }
 
         const ops = processedData.operations;
         for (let opIdx = 0; opIdx < ops.length; opIdx++) {
@@ -1234,6 +1269,14 @@ json.dumps(result)
                 }
                 throw error;
             }
+        }
+        } finally {
+            const resetArgs = ['-c', 'dirtyJtag', '-r'];
+            log(`\x1b[34m$ openFPGALoader ${resetArgs.join(' ')}\x1b[0m`);
+            try { await runOpenFPGALoader(resetArgs, {}, {
+                stdout: (data) => { if (data && term) term.write(new TextDecoder().decode(data)); },
+                stderr: (data) => { if (data && term) term.write(new TextDecoder().decode(data)); },
+            }); } catch (e) {}
         }
 
         progressSet(range[1]);

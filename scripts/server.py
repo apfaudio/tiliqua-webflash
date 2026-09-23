@@ -248,6 +248,7 @@ def build_application():
         ("tiliqua/gateware/src/tiliqua/flash/archive_loader.py", "tiliqua/flash/archive_loader.py"),
         ("tiliqua/gateware/src/tiliqua/flash/spiflash_layout.py", "tiliqua/flash/spiflash_layout.py"),
         ("tiliqua/gateware/src/tiliqua/flash/openfpgaloader.py", "tiliqua/flash/openfpgaloader.py"),
+        ("tiliqua/gateware/src/tiliqua/flash/spiflash_status.py", "tiliqua/flash/spiflash_status.py"),
         # Python build types module (skip __init__.py, we'll create empty one)
         ("tiliqua/gateware/src/tiliqua/build/types.py", "tiliqua/build/types.py"),
         # Rust manifest Python bindings
